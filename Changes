@@ -1,5 +1,13 @@
 Revision history for Test-WWW-Mechanize
 
+0.06    Thu Sep 30 21:49:08 CDT 2004
+        * Added new methods:
+          - page_links_content_like()
+          - page_links_content_unlike()
+          - link_content_like()
+          - link_content_unlike()
+          - link_status_isnt()
+
 0.04    Mon Jul 12 22:16:10 CDT 2004
         [THINGS THAT MAY BREAK YOUR CODE]
         * Renamed link_status() to link_status_is().

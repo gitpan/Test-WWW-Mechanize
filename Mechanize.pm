@@ -17,11 +17,11 @@ Test::WWW::Mechanize - The great new Test::WWW::Mechanize!
 
 =head1 Version
 
-Version 0.04
+Version 0.06
 
 =cut
 
-our $VERSION = '0.04';
+our $VERSION = '0.06';
 
 =head1 Synopsis
 
@@ -29,12 +29,14 @@ Test::WWW::Mechanize is a subclass of WWW::Mechanize that incorporates features 
 for doing web application testing.  For example:
 
     $mech->get( $page );
-    $mech->title_is( "Invoice Status", "Make sure we're on the invoice page" );
+    $mech->title_is( "Invoice Status", 
+      "Make sure we're on the invoice page" );
 
 This is equivalent to:
 
     $mech->get( $page );
-    is( $mech->title, "Invoice Status", "Make sure we're on the invoice page" );
+    is( $mech->title, "Invoice Status", 
+      "Make sure we're on the invoice page" );
 
 but has nicer error handling.
 
@@ -118,6 +120,99 @@ sub content_like {
     return like_string( $self->content, $regex, $msg );
 }
 
+
+=head2 page_links_ok( [ $msg ] )
+
+Follow all links on the current page and test for HTTP status 200
+
+    $mech->page_links_ok('Check all links');
+
+=cut
+
+sub page_links_ok {
+    my $self = shift;
+    my $msg = shift;
+
+    my @links = $self->links();
+    my @urls = _format_links(\@links);
+
+    my @failures = $self->_check_links_status( \@urls );
+    my $ok = (@failures==0);
+
+    $Test->ok( $ok, $msg );
+    $Test->diag( @failures ) unless $ok;
+
+    return $ok;
+}
+
+=head2 page_links_content_like( $regex,[ $msg ] )
+
+Follow all links on the current page and test their contents for the 
+specified regex.
+
+    $mech->page_links_content_like(qr/html/,
+      'Check all links contain html');
+
+=cut
+
+sub page_links_content_like {
+    my $self = shift;
+    my $regex = shift;
+    my $msg = shift;
+
+    my $usable_regex=$Test->maybe_regex( $regex );
+    unless(defined( $usable_regex )) {
+        my $ok = $Test->ok( 0, 'page_links_content_like' );
+        $Test->diag("     '$regex' doesn't look much like a regex to me.");
+        return $ok;
+    }
+
+    my @links = $self->links();
+    my @urls = _format_links(\@links);
+
+    my @failures = $self->_check_links_content( \@urls, $regex );
+    my $ok = (@failures==0);
+
+    $Test->ok( $ok, $msg );
+    $Test->diag( @failures ) unless $ok;
+
+    return $ok;
+}
+
+=head2 page_links_content_unlike( $regex,[ $msg ] )
+
+Follow all links on the current page and test their contents do not
+contain the specified regex.
+
+    $mech->page_links_content_unlike(qr/Restricted/,
+      'Check all links do not contain Restricted');
+
+=cut
+
+sub page_links_content_unlike {
+    my $self = shift;
+    my $regex = shift;
+    my $msg = shift;
+
+    my $usable_regex=$Test->maybe_regex( $regex );
+    unless(defined( $usable_regex )) {
+        my $ok = $Test->ok( 0, 'page_links_content_unlike' );
+        $Test->diag("     '$regex' doesn't look much like a regex to me.");
+        return $ok;
+    }
+
+    my @links = $self->links();
+    my @urls = _format_links(\@links);
+
+    my @failures = $self->_check_links_content( \@urls, $regex, 'unlike' );
+    my $ok = (@failures==0);
+
+    $Test->ok( $ok, $msg );
+    $Test->diag( @failures ) unless $ok;
+
+    return $ok;
+}
+
 =head2 links_ok( $links [, $msg ] )
 
 Check the current page for specified links and test for HTTP status
@@ -141,7 +236,7 @@ sub links_ok {
     my $msg = shift;
 
     my @urls = _format_links( $links );
-    my @failures = $self->_check_links( \@urls );
+    my @failures = $self->_check_links_status( \@urls );
     my $ok = (@failures == 0);
 
     $Test->ok( $ok, $msg );
@@ -149,33 +244,6 @@ sub links_ok {
 
     return $ok;
 }
-
-=head2 page_links_ok( [ $msg ] )
-
-Follow all links on the current page and test for HTTP status 200
-
-    $mech->page_links_ok('Check all links');
-
-=cut
-
-# TODO: This should be a wrapper around links_ok()
-
-sub page_links_ok {
-    my $self = shift;
-    my $msg = shift;
-
-    my @links = $self->links();
-    my @urls = _format_links(\@links);
-
-    my @failures = $self->_check_links( \@urls );
-    my $ok = (@failures==0);
-
-    $Test->ok( $ok, $msg );
-    $Test->diag( @failures ) unless $ok;
-
-    return $ok;
-}
-
 
 =head2 link_status_is( $links, $status [, $msg ] )
 
@@ -185,12 +253,11 @@ containing L<WWW::Mechanize::Link> objects, an array of URLs, or a
 scalar URL name.
 
     my @links = $mech->links();
-    $mech->link_status_is( \@links, 403,'Check all links are restricted' );
+    $mech->link_status_is( \@links, 403,
+      'Check all links are restricted' );
 
 =cut
 
-# TODO: This should also be a wrapper. Once it's figured out how to use
-# Test::Builder::Tester and have $0 be consistent.
 sub link_status_is {
     my $self = shift;
     my $links = shift;
@@ -198,7 +265,7 @@ sub link_status_is {
     my $msg = shift;
 
     my @urls = _format_links( $links );
-    my @failures = $self->_check_links( \@urls, $status );
+    my @failures = $self->_check_links_status( \@urls, $status );
     my $ok = (@failures == 0);
 
     $Test->ok( $ok, $msg );
@@ -207,11 +274,114 @@ sub link_status_is {
     return $ok;
 }
 
-# This actually performs the check of each url. 
-sub _check_links {
+=head2 link_status_isnt( $links, $status [, $msg ] )
+
+Check the current page for specified links and test for HTTP status
+passed.  The links may be specified as a reference to an array
+containing L<WWW::Mechanize::Link> objects, an array of URLs, or a
+scalar URL name.
+
+    my @links = $mech->links();
+    $mech->link_status_isnt( \@links, 404,
+      'Check all links are not 404' );
+
+=cut
+
+sub link_status_isnt {
+    my $self = shift;
+    my $links = shift;
+    my $status = shift;
+    my $msg = shift;
+
+    my @urls = _format_links( $links );
+    my @failures = $self->_check_links_status( \@urls, $status, 'isnt' );
+    my $ok = (@failures == 0);
+
+    $Test->ok( $ok, $msg );
+    $Test->diag( @failures ) unless $ok;
+
+    return $ok;
+}
+
+
+=head2 link_content_like( $links, $regex [, $msg ] )
+
+Check the current page for specified links and test the content of each
+for the regex passed.  The links may be specified as a reference to 
+an array containing L<WWW::Mechanize::Link> objects, an array of URLs, 
+or a scalar URL name.
+
+    my @links = $mech->links();
+    $mech->link_content_like( \@links, qr/Restricted/,
+        'Check all links are restricted' );
+
+=cut
+
+sub link_content_like {
+    my $self = shift;
+    my $links = shift;
+    my $regex = shift;
+    my $msg = shift;
+
+    my $usable_regex=$Test->maybe_regex( $regex );
+    unless(defined( $usable_regex )) {
+        my $ok = $Test->ok( 0, 'link_content_like' );
+        $Test->diag("     '$regex' doesn't look much like a regex to me.");
+        return $ok;
+    }
+
+    my @urls = _format_links( $links );
+    my @failures = $self->_check_links_content( \@urls, $regex );
+    my $ok = (@failures == 0);
+
+    $Test->ok( $ok, $msg );
+    $Test->diag( @failures ) unless $ok;
+
+    return $ok;
+}
+
+=head2 link_content_unlike( $links, $regex [, $msg ] )
+
+Check the current page for specified links and test the content of each
+does not contain regex passed.  The links may be specified as a reference 
+to an array containing L<WWW::Mechanize::Link> objects, an array of URLs, 
+or a scalar URL name.
+
+    my @links = $mech->links();
+    $mech->link_content_like( \@links, qr/Restricted/,
+      'Check all links are restricted' );
+
+=cut
+
+sub link_content_unlike {
+    my $self = shift;
+    my $links = shift;
+    my $regex = shift;
+    my $msg = shift;
+
+    my $usable_regex=$Test->maybe_regex( $regex );
+    unless(defined( $usable_regex )) {
+        my $ok = $Test->ok( 0, 'link_content_unlike' );
+        $Test->diag("     '$regex' doesn't look much like a regex to me.");
+        return $ok;
+    }
+
+    my @urls = _format_links( $links );
+    my @failures = $self->_check_links_content( \@urls, $regex, 'unlike' );
+    my $ok = (@failures == 0);
+
+    $Test->ok( $ok, $msg );
+    $Test->diag( @failures ) unless $ok;
+
+    return $ok;
+}
+
+# This actually performs the status check of each url. 
+sub _check_links_status {
     my $self = shift;
     my $urls = shift;
     my $status = shift || 200;
+    my $test = shift || 'is';
 
     # Create a clone of the $mech used during the test as to not disrupt
     # the original.
@@ -221,7 +391,40 @@ sub _check_links {
 
     for my $url ( @$urls ) {
         if ( $mech->follow_link( url => $url ) ) {
-            push( @failures, $url ) unless $mech->status() == $status;
+            if($test eq 'is') {
+              push( @failures, $url ) unless $mech->status() == $status;
+            } else {
+              push( @failures, $url ) unless $mech->status() != $status;
+            }
+            $mech->back();
+        } else {
+            push( @failures, $url );
+        }
+    } # for
+
+    return @failures;
+}
+
+# This actually performs the content check of each url. 
+sub _check_links_content {
+    my $self = shift;
+    my $urls = shift;
+    my $regex = shift || qr/<html>/;
+    my $test = shift || 'like';
+
+    # Create a clone of the $mech used during the test as to not disrupt
+    # the original.
+    my $mech = $self->clone();
+
+    my @failures;
+    for my $url ( @$urls ) {
+        if ( $mech->follow_link( url => $url ) ) {
+            my $content=$mech->content();
+            if($test eq 'like') {
+              push( @failures, $url ) unless $content=~/$regex/;
+            } else {
+              push( @failures, $url ) unless $content!~/$regex/;
+            }
             $mech->back();
         } else {
             push( @failures, $url );
@@ -260,23 +463,27 @@ sub _format_links {
 
 =back
 
-=head1 Author
-
-Andy Lester, C<< <andy@petdance.com> >>
-
-=head1 Bugs
+=head1 BUGS
 
 Please report any bugs or feature requests to
 C<bug-test-www-mechanize@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.  I will be notified, and then you'll automatically
 be notified of progress on your bug as I make changes.
 
-=head1 Copyright & License
+=head1 COPYRIGHT & LICENSE
 
 Copyright 2004 Andy Lester, All Rights Reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
+
+=head1 AUTHOR
+
+Andy Lester, C<< <andy@petdance.com> >>
+
+=head1 ACKNOWLEDGEMENTS
+
+Thanks to Shawn Sorichetti for big help and chunks of code.
 
 =cut
 
