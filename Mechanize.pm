@@ -6,11 +6,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.04
+Version 1.05_01
 
 =cut
 
-our $VERSION = '1.04';
+our $VERSION = '1.05_01';
 
 =head1 SYNOPSIS
 
@@ -68,9 +68,10 @@ sub new {
 
 =head2 $mech->get_ok($url, [ \%LWP_options ,] $desc)
 
-A wrapper around WWW::Mechanize's get(), with similar options, except the
-second argument needs to be a hash reference, not a hash. Like WWW::Mechanize's
-get(), it returns an HTTP::Response object.
+A wrapper around WWW::Mechanize's get(), with similar options, except
+the second argument needs to be a hash reference, not a hash. Like
+well-behaved C<*_ok()> functions, it returns true if the test passed,
+or false if not.
 
 =cut
 
@@ -97,12 +98,16 @@ sub get_ok {
         }
     } # parms left
 
-    my $rc = $self->get( $url, %opts );
+    $self->get( $url, %opts );
     my $ok = $self->success;
 
     $Test->ok( $ok, $desc );
+    if ( !$ok ) {
+        $Test->diag( $self->status );
+        $Test->diag( $self->response->message ) if $self->response;
+    }
 
-    return $rc;
+    return $ok;
 }
 
 =head2 $mech->title_is( $str [, $desc ] )

@@ -1,5 +1,11 @@
 Revision history for Test-WWW-Mechanize
 
+1.05_01 Tue Mar  8 16:24:36 CST 2005
+        [ENHANCEMENTS]
+        * get_ok() now shows the status line for the mech if the test
+          fails.
+        * get_ok() now returns true/false, not an HTTP::Response.
+
 1.04    Fri Mar  4 00:08:42 CST 2005
         [ENHANCEMENTS]
         * Added follow_link_ok().  Thanks to Mike O'Regan.

@@ -5,7 +5,7 @@ Makefile.PL
 Mechanize.pm
 README
 
-t/00.load.t
+t/00load.t
 t/badlinks.html
 t/content_contains.t
 t/content_lacks.t
