@@ -1,6 +1,13 @@
 Revision history for Test-WWW-Mechanize
 
-1.00    
+1.02    Wed Dec 15 17:35:23 CST 2004
+        [ENHANCEMENTS]
+        * Added content_lacks()
+
+        [DOCUMENTATION]
+        * Fixed some documentation bugs.  Thanks to Drew Taylor.
+
+1.00    Thu Dec  9 11:41:50 CST 2004
         [ENHANCEMENTS]
         * Added content_contains()
         * Fixed diagnostic errors to work the same way regardless of
