@@ -1,0 +1,10 @@
+Changes
+MANIFEST
+META.yml # Will be created by "make dist"
+Makefile.PL
+Mechanize.pm
+README
+t/00.load.t
+t/new.t
+t/pod-coverage.t
+t/pod.t
