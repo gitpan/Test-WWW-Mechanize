@@ -9,17 +9,19 @@ use Test::Builder;
 
 our @ISA = qw( WWW::Mechanize );
 
+my $Test = Test::Builder->new();
+
 =head1 NAME
 
 Test::WWW::Mechanize - The great new Test::WWW::Mechanize!
 
 =head1 Version
 
-Version 0.02
+Version 0.04
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.04';
 
 =head1 Synopsis
 
@@ -142,7 +144,6 @@ sub links_ok {
     my @failures = $self->_check_links( \@urls );
     my $ok = (@failures == 0);
 
-    my $Test = Test::Builder->new;
     $Test->ok( $ok, $msg );
     $Test->diag( @failures ) unless $ok;
 
@@ -169,7 +170,37 @@ sub page_links_ok {
     my @failures = $self->_check_links( \@urls );
     my $ok = (@failures==0);
 
-    my $Test = Test::Builder->new;
+    $Test->ok( $ok, $msg );
+    $Test->diag( @failures ) unless $ok;
+
+    return $ok;
+}
+
+
+=head2 link_status_is( $links, $status [, $msg ] )
+
+Check the current page for specified links and test for HTTP status
+passed.  The links may be specified as a reference to an array
+containing L<WWW::Mechanize::Link> objects, an array of URLs, or a
+scalar URL name.
+
+    my @links = $mech->links();
+    $mech->link_status_is( \@links, 403,'Check all links are restricted' );
+
+=cut
+
+# TODO: This should also be a wrapper. Once it's figured out how to use
+# Test::Builder::Tester and have $0 be consistent.
+sub link_status_is {
+    my $self = shift;
+    my $links = shift;
+    my $status = shift;
+    my $msg = shift;
+
+    my @urls = _format_links( $links );
+    my @failures = $self->_check_links( \@urls, $status );
+    my $ok = (@failures == 0);
+
     $Test->ok( $ok, $msg );
     $Test->diag( @failures ) unless $ok;
 
@@ -191,7 +222,7 @@ sub _check_links {
     for my $url ( @$urls ) {
         if ( $mech->follow_link( url => $url ) ) {
             push( @failures, $url ) unless $mech->status() == $status;
-            $self->back();
+            $mech->back();
         } else {
             push( @failures, $url );
         }
@@ -206,7 +237,7 @@ sub _format_links {
 
     my @urls;
     if(ref($links) eq 'ARRAY') {
-        if(defined($$links[0])) { 
+        if(defined($$links[0])) {
             if(ref($$links[0]) eq 'WWW::Mechanize::Link') {
                 @urls=map { $_->url() } @$links;
             } else {

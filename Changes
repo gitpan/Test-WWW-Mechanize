@@ -1,6 +1,13 @@
 Revision history for Test-WWW-Mechanize
 
-0.02    
+0.04    Mon Jul 12 22:16:10 CDT 2004
+        [THINGS THAT MAY BREAK YOUR CODE]
+        * Renamed link_status() to link_status_is().
+
+        [FIXES]
+        * Fixed a bug in link_status_is().
+
+0.02    July 4 2004
         [ENHANCEMENTS]
         * Added links_ok() and page_links_ok() methods.  Thanks to
           Shawn Sorichetti.

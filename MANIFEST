@@ -7,6 +7,7 @@ README
 t/00.load.t
 t/badlinks.html
 t/goodlinks.html
+t/link_status.t
 t/links_ok.t
 t/new.t
 t/page_links_ok.t
