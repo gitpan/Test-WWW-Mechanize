@@ -17,11 +17,11 @@ Test::WWW::Mechanize - The great new Test::WWW::Mechanize!
 
 =head1 Version
 
-Version 0.06
+Version 0.99
 
 =cut
 
-our $VERSION = '0.06';
+our $VERSION = '0.99';
 
 =head1 Synopsis
 
@@ -73,6 +73,7 @@ sub title_is {
     my $str = shift;
     my $msg = shift;
 
+    local $Test::Builder::Level = 2;
     return is_string( $self->title, $str, $msg );
 }
 
@@ -89,7 +90,25 @@ sub title_like {
     my $regex = shift;
     my $msg = shift;
 
+    local $Test::Builder::Level = 2;
     return like_string( $self->title, $regex, $msg );
+}
+
+=head2 title_unlike( $regex [, $msg ] )
+
+Tells if the title of the page matches the given regex.
+
+    $mech->title_unlike( qr/Invoices for (.+)/
+
+=cut
+
+sub title_unlike {
+    my $self = shift;
+    my $regex = shift;
+    my $msg = shift;
+
+    local $Test::Builder::Level = 2;
+    return unlike_string( $self->title, $regex, $msg );
 }
 
 =head2 content_is( $str [, $msg ] )
@@ -103,6 +122,7 @@ sub content_is {
     my $str = shift;
     my $msg = shift;
 
+    local $Test::Builder::Level = 2;
     return is_string( $self->content, $str, $msg );
 }
 
@@ -117,7 +137,24 @@ sub content_like {
     my $regex = shift;
     my $msg = shift;
 
+    local $Test::Builder::Level = 2;
     return like_string( $self->content, $regex, $msg );
+}
+
+
+=head2 content_unlike( $regex [, $msg ] )
+
+Tells if the content of the page matches the given regex
+
+=cut
+
+sub content_unlike {
+    my $self = shift;
+    my $regex = shift;
+    my $msg = shift;
+
+    local $Test::Builder::Level = 2;
+    return unlike_string( $self->content, $regex, $msg );
 }
 
 
