@@ -25,7 +25,7 @@ test_test('Handles All page links successful');
 $mech->get(URI::file->cwd().'t/badlinks.html');
 
 test_out('not ok 1 - Checking some page link failures');
-test_err("#     Failed test ($0 at line ".line_num(+4).")");
+test_fail(+4);
 test_diag('bad1.html');
 test_diag('bad2.html');
 test_diag('bad3.html');

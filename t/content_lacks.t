@@ -22,7 +22,7 @@ test_test( "Finds the lacks" );
 
 
 test_out(  "not ok 1 - Shouldn't say it's a test page" );
-test_err(  "#     Failed test ($0 at line ".line_num(+4).")");
+test_fail(+4);
 test_diag(q(    searched: "<html>\x{0a}  <head>\x{0a}    <title>Test Page</title>\x{0a}  </h"...) );
 test_diag(q(   and found: "Test Page") );
 test_diag(q( at position: 27) );

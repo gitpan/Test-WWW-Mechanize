@@ -1,5 +1,10 @@
 Revision history for Test-WWW-Mechanize
 
+1.04    Fri Mar  4 00:08:42 CST 2005
+        [ENHANCEMENTS]
+        * Added follow_link_ok().  Thanks to Mike O'Regan.
+        * Added get_ok().  Thanks to Dan Friedman.
+
 1.02    Wed Dec 15 17:35:23 CST 2004
         [ENHANCEMENTS]
         * Added content_lacks()

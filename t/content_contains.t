@@ -22,7 +22,7 @@ test_test( "Finds the contains" );
 
 
 test_out( 'not ok 1 - Where is Mungo?' );
-test_err("#     Failed test ($0 at line ".line_num(+3).")");
+test_fail(+3);
 test_diag(q(    searched: "<html>\x{0a}  <head>\x{0a}    <title>Test Page</title>\x{0a}  </h"...) );
 test_diag(q(  can't find: "Mungo") );
 $mech->content_contains( 'Mungo', "Where is Mungo?" );

@@ -30,7 +30,7 @@ $mech->get(URI::file->cwd().'t/badlinks.html');
 
 $links=$mech->links();
 test_out('not ok 1 - Checking all links some bad');
-test_err("#     Failed test ($0 at line ".line_num(+4).")");
+test_fail(+4);
 test_diag('bad1.html');
 test_diag('bad2.html');
 test_diag('bad3.html');
@@ -38,7 +38,7 @@ $mech->links_ok($links,'Checking all links some bad');
 test_test('Handles bad links');
 
 test_out('not ok 1 - Checking specified link not found');
-test_err("#     Failed test ($0 at line ".line_num(+2).")");
+test_fail(+2);
 test_diag('test2.html');
 $mech->links_ok('test2.html','Checking specified link not found');
 test_test('Handles link not found');

@@ -29,20 +29,20 @@ $mech->get(URI::file->cwd().'t/badlinks.html');
 
 $links=$mech->links();
 test_out('not ok 1 - Checking all links some bad');
-test_err("#     Failed test ($0 at line ".line_num(+2).")");
+test_fail(+2);
 test_diag('goodlinks.html');
 $mech->link_status_is($links,404,'Checking all links some bad');
 test_test('Handles bad links');
 
 
 test_out('not ok 1 - Checking specified link not found');
-test_err("#     Failed test ($0 at line ".line_num(+2).")");
+test_fail(+2);
 test_diag('test2.html');
 $mech->links_ok('test2.html','Checking specified link not found');
 test_test('Handles link not found');
 
 test_out('not ok 1 - Checking all links not 200');
-test_err("#     Failed test ($0 at line ".line_num(+2).")");
+test_fail(+2);
 test_diag('goodlinks.html');
 $mech->link_status_isnt($links,200,'Checking all links not 200');
 test_test('Handles all links mismatch');

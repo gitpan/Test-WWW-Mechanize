@@ -6,4 +6,4 @@ BEGIN {
 use_ok( 'Test::WWW::Mechanize' );
 }
 
-diag( "Testing Test::WWW::Mechanize $Test::WWW::Mechanize::VERSION" );
+diag( "Testing Test::WWW::Mechanize $Test::WWW::Mechanize::VERSION, Perl $], $^X" );

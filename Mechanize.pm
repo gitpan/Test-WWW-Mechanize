@@ -6,18 +6,18 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.02
+Version 1.04
 
 =cut
 
-our $VERSION = '1.02';
+our $VERSION = '1.04';
 
 =head1 SYNOPSIS
 
 Test::WWW::Mechanize is a subclass of L<WWW::Mechanize> that incorporates
 features for web application testing.  For example:
 
-    $mech->get( $page );
+    $mech->get_ok( $page );
     $mech->title_is( "Invoice Status", "Make sure we're on the invoice page" );
     $mech->content_contains( "Andy Lester", "My name somewhere" );
     $mech->content_like( qr/(cpan|perl)\.org/, "Link to perl.org or CPAN" );
@@ -25,6 +25,7 @@ features for web application testing.  For example:
 This is equivalent to:
 
     $mech->get( $page );
+    ok( $mech->success );
     is( $mech->title, "Invoice Status", "Make sure we're on the invoice page" );
     ok( index( $mech->content, "Andy Lester" ) >= 0, "My name somewhere" );
     like( $mech->content, qr/(cpan|perl)\.org/, "Link to perl.org or CPAN" );
@@ -65,7 +66,46 @@ sub new {
 
 =head1 METHODS
 
-=head2 $mech->title_is( $str [, $msg ] )
+=head2 $mech->get_ok($url, [ \%LWP_options ,] $desc)
+
+A wrapper around WWW::Mechanize's get(), with similar options, except the
+second argument needs to be a hash reference, not a hash. Like WWW::Mechanize's
+get(), it returns an HTTP::Response object.
+
+=cut
+
+sub get_ok {
+    my $self = shift;
+    my $url = shift;
+
+    my $desc;
+    my %opts;
+
+    if ( @_ ) {
+        my $flex = shift; # The flexible argument
+
+        if ( !defined( $flex ) ) {
+            $desc = shift;
+        } elsif ( ref $flex eq 'HASH' ) {
+            %opts = %$flex;
+            $desc = shift;
+        } elsif ( ref $flex eq 'ARRAY' ) {
+            %opts = @$flex;
+            $desc = shift;
+        } else {
+            $desc = $flex;
+        }
+    } # parms left
+
+    my $rc = $self->get( $url, %opts );
+    my $ok = $self->success;
+
+    $Test->ok( $ok, $desc );
+
+    return $rc;
+}
+
+=head2 $mech->title_is( $str [, $desc ] )
 
 Tells if the title of the page is the given string.
 
@@ -76,13 +116,13 @@ Tells if the title of the page is the given string.
 sub title_is {
     my $self = shift;
     my $str = shift;
-    my $msg = shift;
+    my $desc = shift;
 
-    local $Test::Builder::Level = 2;
-    return is_string( $self->title, $str, $msg );
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return is_string( $self->title, $str, $desc );
 }
 
-=head2 $mech->title_like( $regex [, $msg ] )
+=head2 $mech->title_like( $regex [, $desc ] )
 
 Tells if the title of the page matches the given regex.
 
@@ -93,13 +133,13 @@ Tells if the title of the page matches the given regex.
 sub title_like {
     my $self = shift;
     my $regex = shift;
-    my $msg = shift;
+    my $desc = shift;
 
-    local $Test::Builder::Level = 2;
-    return like_string( $self->title, $regex, $msg );
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return like_string( $self->title, $regex, $desc );
 }
 
-=head2 $mech->title_unlike( $regex [, $msg ] )
+=head2 $mech->title_unlike( $regex [, $desc ] )
 
 Tells if the title of the page matches the given regex.
 
@@ -110,13 +150,13 @@ Tells if the title of the page matches the given regex.
 sub title_unlike {
     my $self = shift;
     my $regex = shift;
-    my $msg = shift;
+    my $desc = shift;
 
-    local $Test::Builder::Level = 2;
-    return unlike_string( $self->title, $regex, $msg );
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return unlike_string( $self->title, $regex, $desc );
 }
 
-=head2 $mech->content_is( $str [, $msg ] )
+=head2 $mech->content_is( $str [, $desc ] )
 
 Tells if the content of the page matches the given string
 
@@ -125,13 +165,13 @@ Tells if the content of the page matches the given string
 sub content_is {
     my $self = shift;
     my $str = shift;
-    my $msg = shift;
+    my $desc = shift;
 
-    local $Test::Builder::Level = 2;
-    return is_string( $self->content, $str, $msg );
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return is_string( $self->content, $str, $desc );
 }
 
-=head2 $mech->content_contains( $str [, $msg ] )
+=head2 $mech->content_contains( $str [, $desc ] )
 
 Tells if the content of the page contains I<$str>.
 
@@ -140,13 +180,13 @@ Tells if the content of the page contains I<$str>.
 sub content_contains {
     my $self = shift;
     my $str = shift;
-    my $msg = shift;
+    my $desc = shift;
 
-    local $Test::Builder::Level = 2;
-    return contains_string( $self->content, $str, $msg );
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return contains_string( $self->content, $str, $desc );
 }
 
-=head2 $mech->content_lacks( $str [, $msg ] )
+=head2 $mech->content_lacks( $str [, $desc ] )
 
 Tells if the content of the page lacks I<$str>.
 
@@ -155,13 +195,13 @@ Tells if the content of the page lacks I<$str>.
 sub content_lacks {
     my $self = shift;
     my $str = shift;
-    my $msg = shift;
+    my $desc = shift;
 
-    local $Test::Builder::Level = 2;
-    return lacks_string( $self->content, $str, $msg );
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return lacks_string( $self->content, $str, $desc );
 }
 
-=head2 $mech->content_like( $regex [, $msg ] )
+=head2 $mech->content_like( $regex [, $desc ] )
 
 Tells if the content of the page matches I<$regex>.
 
@@ -170,13 +210,13 @@ Tells if the content of the page matches I<$regex>.
 sub content_like {
     my $self = shift;
     my $regex = shift;
-    my $msg = shift;
+    my $desc = shift;
 
-    local $Test::Builder::Level = 2;
-    return like_string( $self->content, $regex, $msg );
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return like_string( $self->content, $regex, $desc );
 }
 
-=head2 $mech->content_unlike( $regex [, $msg ] )
+=head2 $mech->content_unlike( $regex [, $desc ] )
 
 Tells if the content of the page does NOT match I<$regex>.
 
@@ -185,14 +225,14 @@ Tells if the content of the page does NOT match I<$regex>.
 sub content_unlike {
     my $self = shift;
     my $regex = shift;
-    my $msg = shift;
+    my $desc = shift;
 
-    local $Test::Builder::Level = 2;
-    return unlike_string( $self->content, $regex, $msg );
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return unlike_string( $self->content, $regex, $desc );
 }
 
 
-=head2 $mech->page_links_ok( [ $msg ] )
+=head2 $mech->page_links_ok( [ $desc ] )
 
 Follow all links on the current page and test for HTTP status 200
 
@@ -202,7 +242,7 @@ Follow all links on the current page and test for HTTP status 200
 
 sub page_links_ok {
     my $self = shift;
-    my $msg = shift;
+    my $desc = shift;
 
     my @links = $self->links();
     my @urls = _format_links(\@links);
@@ -210,13 +250,13 @@ sub page_links_ok {
     my @failures = $self->_check_links_status( \@urls );
     my $ok = (@failures==0);
 
-    $Test->ok( $ok, $msg );
+    $Test->ok( $ok, $desc );
     $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
 
-=head2 $mech->page_links_content_like( $regex,[ $msg ] )
+=head2 $mech->page_links_content_like( $regex,[ $desc ] )
 
 Follow all links on the current page and test their contents for I<$regex>.
 
@@ -228,7 +268,7 @@ Follow all links on the current page and test their contents for I<$regex>.
 sub page_links_content_like {
     my $self = shift;
     my $regex = shift;
-    my $msg = shift;
+    my $desc = shift;
 
     my $usable_regex=$Test->maybe_regex( $regex );
     unless(defined( $usable_regex )) {
@@ -243,13 +283,13 @@ sub page_links_content_like {
     my @failures = $self->_check_links_content( \@urls, $regex );
     my $ok = (@failures==0);
 
-    $Test->ok( $ok, $msg );
+    $Test->ok( $ok, $desc );
     $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
 
-=head2 $mech->page_links_content_unlike( $regex,[ $msg ] )
+=head2 $mech->page_links_content_unlike( $regex,[ $desc ] )
 
 Follow all links on the current page and test their contents do not
 contain the specified regex.
@@ -262,7 +302,7 @@ contain the specified regex.
 sub page_links_content_unlike {
     my $self = shift;
     my $regex = shift;
-    my $msg = shift;
+    my $desc = shift;
 
     my $usable_regex=$Test->maybe_regex( $regex );
     unless(defined( $usable_regex )) {
@@ -277,13 +317,13 @@ sub page_links_content_unlike {
     my @failures = $self->_check_links_content( \@urls, $regex, 'unlike' );
     my $ok = (@failures==0);
 
-    $Test->ok( $ok, $msg );
+    $Test->ok( $ok, $desc );
     $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
 
-=head2 $mech->links_ok( $links [, $msg ] )
+=head2 $mech->links_ok( $links [, $desc ] )
 
 Check the current page for specified links and test for HTTP status
 200.  The links may be specified as a reference to an array containing
@@ -303,19 +343,19 @@ name.
 sub links_ok {
     my $self = shift;
     my $links = shift;
-    my $msg = shift;
+    my $desc = shift;
 
     my @urls = _format_links( $links );
     my @failures = $self->_check_links_status( \@urls );
     my $ok = (@failures == 0);
 
-    $Test->ok( $ok, $msg );
+    $Test->ok( $ok, $desc );
     $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
 
-=head2 $mech->link_status_is( $links, $status [, $msg ] )
+=head2 $mech->link_status_is( $links, $status [, $desc ] )
 
 Check the current page for specified links and test for HTTP status
 passed.  The links may be specified as a reference to an array
@@ -332,19 +372,19 @@ sub link_status_is {
     my $self = shift;
     my $links = shift;
     my $status = shift;
-    my $msg = shift;
+    my $desc = shift;
 
     my @urls = _format_links( $links );
     my @failures = $self->_check_links_status( \@urls, $status );
     my $ok = (@failures == 0);
 
-    $Test->ok( $ok, $msg );
+    $Test->ok( $ok, $desc );
     $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
 
-=head2 $mech->link_status_isnt( $links, $status [, $msg ] )
+=head2 $mech->link_status_isnt( $links, $status [, $desc ] )
 
 Check the current page for specified links and test for HTTP status
 passed.  The links may be specified as a reference to an array
@@ -361,20 +401,20 @@ sub link_status_isnt {
     my $self = shift;
     my $links = shift;
     my $status = shift;
-    my $msg = shift;
+    my $desc = shift;
 
     my @urls = _format_links( $links );
     my @failures = $self->_check_links_status( \@urls, $status, 'isnt' );
     my $ok = (@failures == 0);
 
-    $Test->ok( $ok, $msg );
+    $Test->ok( $ok, $desc );
     $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
 
 
-=head2 $mech->link_content_like( $links, $regex [, $msg ] )
+=head2 $mech->link_content_like( $links, $regex [, $desc ] )
 
 Check the current page for specified links and test the content of
 each against I<$regex>.  The links may be specified as a reference to
@@ -391,7 +431,7 @@ sub link_content_like {
     my $self = shift;
     my $links = shift;
     my $regex = shift;
-    my $msg = shift;
+    my $desc = shift;
 
     my $usable_regex=$Test->maybe_regex( $regex );
     unless(defined( $usable_regex )) {
@@ -404,13 +444,13 @@ sub link_content_like {
     my @failures = $self->_check_links_content( \@urls, $regex );
     my $ok = (@failures == 0);
 
-    $Test->ok( $ok, $msg );
+    $Test->ok( $ok, $desc );
     $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
 
-=head2 $mech->link_content_unlike( $links, $regex [, $msg ] )
+=head2 $mech->link_content_unlike( $links, $regex [, $desc ] )
 
 Check the current page for specified links and test the content of each
 does not match I<$regex>.  The links may be specified as a reference to
@@ -427,7 +467,7 @@ sub link_content_unlike {
     my $self = shift;
     my $links = shift;
     my $regex = shift;
-    my $msg = shift;
+    my $desc = shift;
 
     my $usable_regex=$Test->maybe_regex( $regex );
     unless(defined( $usable_regex )) {
@@ -440,7 +480,7 @@ sub link_content_unlike {
     my @failures = $self->_check_links_content( \@urls, $regex, 'unlike' );
     my $ok = (@failures == 0);
 
-    $Test->ok( $ok, $msg );
+    $Test->ok( $ok, $desc );
     $Test->diag( $_ ) for @failures;
 
     return $ok;
@@ -523,6 +563,53 @@ sub _format_links {
     return @urls;
 }
 
+=head2 follow_link_ok( \%parms [, $comment] )
+
+Makes a C<follow_link()> call and executes tests on the results.
+The link must be found, and then followed successfully.  Otherwise,
+this test fails.
+
+I<%parms> is a hashref containing the parms to pass to C<follow_link()>.
+Note that the parms to C<follow_link()> are a hash whereas the parms to
+this function are a hashref.  You have to call this function like:
+
+    $agent->follow_like_ok( {n=>3}, "looking for 3rd link" );
+
+As with other test functions, C<$comment> is optional.  If it is supplied
+then it will display when running the test harness in verbose mode.
+
+Returns true value if the specified link was found and followed
+successfully.  The HTTP::Response object returned by follow_link()
+is not available.
+
+=cut
+
+sub follow_link_ok {
+    my $self = shift;
+    my $parms = shift || {};
+    my $comment = shift;
+
+    # return from follow_link() is an HTTP::Response or undef
+    my $response = $self->follow_link( %$parms );
+
+    my $ok;
+    my $error;
+    if ( !$response ) {
+        $error = "No matching link found";
+    } else {
+        if ( !$response->is_success ) {
+            $error = $response->as_string;
+        } else {
+            $ok = 1;
+        }
+    }
+
+    $Test->ok( $ok, $comment );
+    $Test->diag( $error ) if $error;
+
+    return $ok;
+}
+
 =head1 TODO
 
 Add HTML::Lint and HTML::Tidy capabilities.
@@ -547,7 +634,7 @@ Andy Lester, C<< <andy@petdance.com> >>
 
 =head1 ACKNOWLEDGEMENTS
 
-Thanks to Shawn Sorichetti for big help and chunks of code.
+Thanks to Mike O'Regan and Shawn Sorichetti for big help and chunks of code.
 
 =cut
 
