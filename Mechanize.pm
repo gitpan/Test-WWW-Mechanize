@@ -6,11 +6,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.05_01
+Version 1.05_02
 
 =cut
 
-our $VERSION = '1.05_01';
+our $VERSION = '1.05_02';
 
 =head1 SYNOPSIS
 
@@ -236,6 +236,63 @@ sub content_unlike {
     return unlike_string( $self->content, $regex, $desc );
 }
 
+=head2 $mech->has_tag( $tag, $text [, $desc ] )
+
+Tells if the page has a C<$tag> tag with the given content in its text.
+
+XXX Make the $text optional
+
+=cut
+
+sub has_tag {
+    my $self = shift;
+    my $tag  = shift;
+    my $text = shift;
+    my $desc = shift;
+
+    my $found = $self->_tag_walk( $tag, sub { $text eq $_[0] } );
+
+    return $Test->ok( $found, $desc );
+}
+
+
+=head2 $mech->has_tag_like( $tag, $regex [, $desc ] )
+
+Tells if the page has a C<$tag> tag with the given content in its text.
+
+=cut
+
+sub has_tag_like {
+    my $self = shift;
+    my $tag  = shift;
+    my $text = shift;
+    my $desc = shift;
+
+    my $found = $self->_tag_walk( $tag, sub { $text =~ $_[0] } );
+
+    return $Test->ok( $found, $desc );
+}
+
+
+=head2 $mech->has_tag_like( $tag, $regex [, $desc ] )
+
+Tells if the page has a C<$tag> tag with text matching the given regex.
+
+=cut
+
+sub _tag_walk {
+    my $self = shift;
+    my $tag  = shift;
+    my $match = shift;
+
+    my $p = HTML::TokeParser->new( \($self->content) );
+
+    while ( my $token = $p->get_tag( $tag ) ) {
+        my $tagtext = $p->get_trimmed_text( "/$tag" );
+        return 1 if $match->( $tagtext );
+    }
+    return;
+}
 
 =head2 $mech->page_links_ok( [ $desc ] )
 
