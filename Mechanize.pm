@@ -1,44 +1,49 @@
 package Test::WWW::Mechanize;
 
-use warnings;
-use strict;
-
-use WWW::Mechanize;
-use Test::LongString;
-use Test::Builder;
-
-our @ISA = qw( WWW::Mechanize );
-
-my $Test = Test::Builder->new();
-
 =head1 NAME
 
-Test::WWW::Mechanize - The great new Test::WWW::Mechanize!
+Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 Version
 
-Version 0.99
+Version 1.00
 
 =cut
 
-our $VERSION = '0.99';
+our $VERSION = '1.00';
 
-=head1 Synopsis
+=head1 SYNOPSIS
 
-Test::WWW::Mechanize is a subclass of WWW::Mechanize that incorporates features that make sense
-for doing web application testing.  For example:
+Test::WWW::Mechanize is a subclass of L<WWW::Mechanize> that incorporates
+features for web application testing.  For example:
 
     $mech->get( $page );
-    $mech->title_is( "Invoice Status", 
-      "Make sure we're on the invoice page" );
+    $mech->title_is( "Invoice Status", "Make sure we're on the invoice page" );
+    $mech->content_contains( "Andy Lester", "My name somewhere" );
+    $mech->content_like( qr/(cpan|perl)\.org/, "Link to perl.org or CPAN" );
 
 This is equivalent to:
 
     $mech->get( $page );
-    is( $mech->title, "Invoice Status", 
-      "Make sure we're on the invoice page" );
+    is( $mech->title, "Invoice Status", "Make sure we're on the invoice page" );
+    ok( index( $mech->content, "Andy Lester" ) >= 0, "My name somewhere" );
+    like( $mech->content, qr/(cpan|perl)\.org/, "Link to perl.org or CPAN" );
 
-but has nicer error handling.
+but has nicer diagnostics if they fail.
+
+=cut
+
+use warnings;
+use strict;
+
+use WWW::Mechanize;
+use Test::LongString 0.05;
+use Test::Builder;
+
+use base 'WWW::Mechanize';
+
+my $Test = Test::Builder->new();
+
 
 =head1 Constructor
 
@@ -126,6 +131,21 @@ sub content_is {
     return is_string( $self->content, $str, $msg );
 }
 
+=head2 content_contains( $str [, $msg ] )
+
+Tells if the content of the page contains the given string
+
+=cut
+
+sub content_contains {
+    my $self = shift;
+    my $str = shift;
+    my $msg = shift;
+
+    local $Test::Builder::Level = 2;
+    return contains_string( $self->content, $str, $msg );
+}
+
 =head2 content_like( $regex [, $msg ] )
 
 Tells if the content of the page matches the given regex
@@ -140,7 +160,6 @@ sub content_like {
     local $Test::Builder::Level = 2;
     return like_string( $self->content, $regex, $msg );
 }
-
 
 =head2 content_unlike( $regex [, $msg ] )
 
@@ -177,7 +196,7 @@ sub page_links_ok {
     my $ok = (@failures==0);
 
     $Test->ok( $ok, $msg );
-    $Test->diag( @failures ) unless $ok;
+    $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -211,7 +230,7 @@ sub page_links_content_like {
     my $ok = (@failures==0);
 
     $Test->ok( $ok, $msg );
-    $Test->diag( @failures ) unless $ok;
+    $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -245,7 +264,7 @@ sub page_links_content_unlike {
     my $ok = (@failures==0);
 
     $Test->ok( $ok, $msg );
-    $Test->diag( @failures ) unless $ok;
+    $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -277,7 +296,7 @@ sub links_ok {
     my $ok = (@failures == 0);
 
     $Test->ok( $ok, $msg );
-    $Test->diag( @failures ) unless $ok;
+    $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -306,7 +325,7 @@ sub link_status_is {
     my $ok = (@failures == 0);
 
     $Test->ok( $ok, $msg );
-    $Test->diag( @failures ) unless $ok;
+    $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -335,7 +354,7 @@ sub link_status_isnt {
     my $ok = (@failures == 0);
 
     $Test->ok( $ok, $msg );
-    $Test->diag( @failures ) unless $ok;
+    $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -372,7 +391,7 @@ sub link_content_like {
     my $ok = (@failures == 0);
 
     $Test->ok( $ok, $msg );
-    $Test->diag( @failures ) unless $ok;
+    $Test->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -408,7 +427,7 @@ sub link_content_unlike {
     my $ok = (@failures == 0);
 
     $Test->ok( $ok, $msg );
-    $Test->diag( @failures ) unless $ok;
+    $Test->diag( $_ ) for @failures;
 
     return $ok;
 }

@@ -6,6 +6,7 @@ Mechanize.pm
 README
 t/00.load.t
 t/badlinks.html
+t/content_contains.t
 t/goodlinks.html
 t/link_status.t
 t/links_ok.t

@@ -2,14 +2,15 @@
 
 use strict;
 use warnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::Builder::Tester;
-use Test::WWW::Mechanize;
 use URI::file;
 
+BEGIN {
+    use_ok( 'Test::WWW::Mechanize' );
+}
 
 my $mech=Test::WWW::Mechanize->new();
-
 isa_ok($mech,'Test::WWW::Mechanize');
 
 $mech->get(URI::file->cwd().'t/goodlinks.html');
@@ -29,8 +30,10 @@ $mech->get(URI::file->cwd().'t/badlinks.html');
 
 $links=$mech->links();
 test_out('not ok 1 - Checking all links some bad');
-test_err("#     Failed test ($0 at line ".line_num(+2).")");
-test_diag('bad1.html# bad2.html# bad3.html');
+test_err("#     Failed test ($0 at line ".line_num(+4).")");
+test_diag('bad1.html');
+test_diag('bad2.html');
+test_diag('bad3.html');
 $mech->links_ok($links,'Checking all links some bad');
 test_test('Handles bad links');
 

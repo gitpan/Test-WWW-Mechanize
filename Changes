@@ -1,5 +1,11 @@
 Revision history for Test-WWW-Mechanize
 
+1.00    
+        [ENHANCEMENTS]
+        * Added content_contains()
+        * Fixed diagnostic errors to work the same way regardless of
+          which version of Test::Builder you have.
+
 0.99    Sun Oct 24 11:17:59 CDT 2004
         [ENHANCEMENTS]
         * Added $mech->content_unlike and $mech->title_unlike

@@ -2,14 +2,16 @@
 
 use strict;
 use warnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::Builder::Tester;
-use Test::WWW::Mechanize;
 use URI::file;
+
+BEGIN {
+    use_ok( 'Test::WWW::Mechanize' );
+}
 
 
 my $mech=Test::WWW::Mechanize->new();
-
 isa_ok($mech,'Test::WWW::Mechanize');
 
 $mech->get(URI::file->cwd().'t/goodlinks.html');

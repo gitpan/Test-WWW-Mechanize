@@ -10,7 +10,7 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More'        => 0,
-        'Test::LongString'  => '0.03',
+        'Test::LongString'  => '0.05',
         'URI::file'         => 0,
         'WWW::Mechanize'    => '1.00',
     },

@@ -2,11 +2,13 @@
 
 use strict;
 use warnings;
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Test::Builder::Tester;
-use Test::WWW::Mechanize;
 use URI::file;
 
+BEGIN {
+    use_ok( 'Test::WWW::Mechanize' );
+}
 
 my $mech=Test::WWW::Mechanize->new();
 
@@ -23,8 +25,10 @@ test_test('Handles All page links successful');
 $mech->get(URI::file->cwd().'t/badlinks.html');
 
 test_out('not ok 1 - Checking some page link failures');
-test_err("#     Failed test ($0 at line ".line_num(+2).")");
-test_diag('bad1.html# bad2.html# bad3.html');
+test_err("#     Failed test ($0 at line ".line_num(+4).")");
+test_diag('bad1.html');
+test_diag('bad2.html');
+test_diag('bad3.html');
 $mech->page_links_ok('Checking some page link failures');
 test_test('Handles link not found');
 

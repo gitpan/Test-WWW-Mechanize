@@ -2,14 +2,15 @@
 
 use strict;
 use warnings;
-use Test::More tests => 7;
+use Test::More tests => 8;
 use Test::Builder::Tester;
-use Test::WWW::Mechanize;
 use URI::file;
 
+BEGIN {
+    use_ok( 'Test::WWW::Mechanize' );
+}
 
 my $mech=Test::WWW::Mechanize->new();
-
 isa_ok($mech,'Test::WWW::Mechanize');
 
 $mech->get(URI::file->cwd().'t/goodlinks.html');
@@ -28,8 +29,10 @@ $mech->link_content_like(\@urls,qr/Test/,'Checking all page links contain: Test'
 test_test('Handles All page links contents successful');
 
 test_out('not ok 1 - Checking all page link content failures');
-test_err("#     Failed test ($0 at line ".line_num(+2).")");
-test_diag('goodlinks.html# badlinks.html# goodlinks.html');
+test_err("#     Failed test ($0 at line ".line_num(+4).")");
+test_diag('goodlinks.html');
+test_diag('badlinks.html');
+test_diag('goodlinks.html');
 $mech->link_content_like(\@urls,qr/BadTest/,'Checking all page link content failures');
 test_test('Handles link content not found');
 
@@ -46,7 +49,9 @@ $mech->link_content_unlike(\@urls,qr/BadTest/,'Checking all page links do not co
 test_test('Handles All page links unlike contents successful');
 
 test_out('not ok 1 - Checking all page link unlike content failures');
-test_err("#     Failed test ($0 at line ".line_num(+2).")");
-test_diag('goodlinks.html# badlinks.html# goodlinks.html');
+test_err("#     Failed test ($0 at line ".line_num(+4).")");
+test_diag('goodlinks.html');
+test_diag('badlinks.html');
+test_diag('goodlinks.html');
 $mech->link_content_unlike(\@urls,qr/Test/,'Checking all page link unlike content failures');
 test_test('Handles link unlike content found');
