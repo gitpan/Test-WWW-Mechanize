@@ -11,6 +11,8 @@ WriteMakefile(
     PREREQ_PM => {
         'Test::More'        => 0,
         'Test::LongString'  => '0.03',
+        'URI::file'         => 0,
+        'WWW::Mechanize'    => '1.00',
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Test-WWW-Mechanize-*' },

@@ -5,6 +5,7 @@ use strict;
 
 use WWW::Mechanize;
 use Test::LongString;
+use Test::Builder;
 
 our @ISA = qw( WWW::Mechanize );
 
@@ -14,11 +15,11 @@ Test::WWW::Mechanize - The great new Test::WWW::Mechanize!
 
 =head1 Version
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 Synopsis
 
@@ -113,6 +114,109 @@ sub content_like {
     my $msg = shift;
 
     return like_string( $self->content, $regex, $msg );
+}
+
+=head2 links_ok( $links [, $msg ] )
+
+Check the current page for specified links and test for HTTP status
+200.  The links may be specified as a reference to an array containing
+L<WWW::Mechanize::Link> objects, an array of URLs, or a scalar URL
+name.
+
+    my @links = $mech->find_all_links( url_regex => qr/cnn\.com$/ );
+    $mech->links_ok( \@links, 'Check all links for cnn.com' );
+
+    my @links = qw( index.html search.html about.html );
+    $mech->links_ok( \@links, 'Check main links' );
+
+    $mech->links_ok( 'index.html', 'Check link to index' );
+
+=cut
+
+sub links_ok {
+    my $self = shift;
+    my $links = shift;
+    my $msg = shift;
+
+    my @urls = _format_links( $links );
+    my @failures = $self->_check_links( \@urls );
+    my $ok = (@failures == 0);
+
+    my $Test = Test::Builder->new;
+    $Test->ok( $ok, $msg );
+    $Test->diag( @failures ) unless $ok;
+
+    return $ok;
+}
+
+=head2 page_links_ok( [ $msg ] )
+
+Follow all links on the current page and test for HTTP status 200
+
+    $mech->page_links_ok('Check all links');
+
+=cut
+
+# TODO: This should be a wrapper around links_ok()
+
+sub page_links_ok {
+    my $self = shift;
+    my $msg = shift;
+
+    my @links = $self->links();
+    my @urls = _format_links(\@links);
+
+    my @failures = $self->_check_links( \@urls );
+    my $ok = (@failures==0);
+
+    my $Test = Test::Builder->new;
+    $Test->ok( $ok, $msg );
+    $Test->diag( @failures ) unless $ok;
+
+    return $ok;
+}
+
+# This actually performs the check of each url. 
+sub _check_links {
+    my $self = shift;
+    my $urls = shift;
+    my $status = shift || 200;
+
+    # Create a clone of the $mech used during the test as to not disrupt
+    # the original.
+    my $mech = $self->clone();
+
+    my @failures;
+
+    for my $url ( @$urls ) {
+        if ( $mech->follow_link( url => $url ) ) {
+            push( @failures, $url ) unless $mech->status() == $status;
+            $self->back();
+        } else {
+            push( @failures, $url );
+        }
+    } # for
+
+    return @failures;
+}
+
+# Create an array of urls to match for mech to follow.
+sub _format_links {
+    my $links = shift;
+
+    my @urls;
+    if(ref($links) eq 'ARRAY') {
+        if(defined($$links[0])) { 
+            if(ref($$links[0]) eq 'WWW::Mechanize::Link') {
+                @urls=map { $_->url() } @$links;
+            } else {
+                @urls=@$links;
+            }
+        }
+    } else {
+        push(@urls,$links);
+    }
+    return @urls;
 }
 
 =head1 To-do

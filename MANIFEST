@@ -1,10 +1,14 @@
 Changes
 MANIFEST
-META.yml # Will be created by "make dist"
+META.yml
 Makefile.PL
 Mechanize.pm
 README
 t/00.load.t
+t/badlinks.html
+t/goodlinks.html
+t/links_ok.t
 t/new.t
+t/page_links_ok.t
 t/pod-coverage.t
 t/pod.t
