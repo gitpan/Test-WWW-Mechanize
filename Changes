@@ -1,5 +1,10 @@
 Revision history for Test-WWW-Mechanize
 
+1.06
+        [INTERNALS]
+        * Updated test suite to use HTTP::Server::Simple.
+          Thanks to Shawn Sorichetti for it.
+
 1.05_02 Sun Apr  3 12:19:05 CDT 2005
         [ENHANCEMENTS]
         * Added has_tag() and has_tag_like().  Thanks RJBS.

@@ -6,11 +6,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.05_02
+Version 1.06
 
 =cut
 
-our $VERSION = '1.05_02';
+our $VERSION = '1.06';
 
 =head1 SYNOPSIS
 
@@ -40,6 +40,7 @@ use strict;
 use WWW::Mechanize;
 use Test::LongString 0.07;
 use Test::Builder;
+use Carp::Assert::More;
 
 use base 'WWW::Mechanize';
 
@@ -635,7 +636,7 @@ I<%parms> is a hashref containing the parms to pass to C<follow_link()>.
 Note that the parms to C<follow_link()> are a hash whereas the parms to
 this function are a hashref.  You have to call this function like:
 
-    $agent->follow_like_ok( {n=>3}, "looking for 3rd link" );
+    $agent->follow_link_ok( {n=>3}, "looking for 3rd link" );
 
 As with other test functions, C<$comment> is optional.  If it is supplied
 then it will display when running the test harness in verbose mode.
@@ -670,6 +671,140 @@ sub follow_link_ok {
     $Test->diag( $error ) if $error;
 
     return $ok;
+}
+
+=head2 $agent->stuff_inputs( [\%options] )
+
+XXX Delete this when it winds up in Test::WWW::Mechanize
+
+Finds all free-text input fields (text, textarea, and password) in the
+current form and fills them to their maximum length in hopes of finding
+application code that can't handle it.  Fields with no maximum length
+and all textarea fields are set to 66000 bytes, which will often be
+enough to overflow the data's eventual recepticle.
+
+There is no return value.
+
+If there is no current form then nothing is done.
+
+The hashref $options can contain the following keys:
+
+=over
+
+=item * ignore
+
+hash value is hashref of field names to not touch, e.g.:
+
+    $mech->stuff_inputs( {
+        ignore => [qw( specialfield1 specialfield2 )],
+    } );
+
+=item * fill
+
+hash value is default string to use when stuffing fields.  Copies
+of the string are repeated up to the max length of each field.  E.g.:
+
+    $mech->stuff_inputs( {
+        fill => '@'  # stuff all fields with something easy to recognize
+    } );
+
+=item * specs
+
+hash value is arrayref of hashrefs with which you can pass detailed
+instructions about how to stuff a given field.  E.g.:
+
+    $mech->stuff_inputs( {
+        specs=>{
+            # Some fields are datatype-constrained.  It's most common to
+            # want the field stuffed with valid data.
+            widget_quantity => { fill=>'9' },
+            notes => { maxlength=>2000 },
+        }
+    } );
+
+The specs allowed are I<fill> (use this fill for the field rather than
+the default) and I<maxlength> (use this as the field's maxlength instead
+of any maxlength specified in the HTML).
+
+=back
+
+=cut
+
+sub stuff_inputs {
+    my $self = shift;
+
+    use Carp;
+
+    my $options = shift || {};
+    assert_isa( $options, 'HASH' );
+
+    my $default_fill = '@';
+    if ( exists $options->{fill} && defined $options->{fill} ) {
+        $default_fill = $options->{fill};
+        # TODO: need to verify that length is > 0
+    }
+
+    my $ignore = {};
+    if ( exists $options->{ignore} && defined $options->{ignore} ) {
+        $ignore = $options->{ignore};
+        croak if ref $ignore ne 'HASH';
+    }
+
+    my $specs = {};
+    if ( exists $options->{specs} && defined $options->{specs} ) {
+        $specs = $options->{specs};
+        croak if ref $specs ne 'HASH';
+        # TODO: verify that only valid options passed
+    }
+
+    my @inputs = $self->grep_inputs( { type => qr/^(text|textarea|password)$/ } );
+
+    foreach my $field ( @inputs ) {
+        next if $field->readonly();
+        next if $field->disabled();  # TODO: HTML::Form::TextInput allows setting disabled--allow it here?
+
+        my $name = $field->name();
+
+        # might be one of the fields to ignore
+        next if exists $ignore->{ $name };
+
+        # TODO: need to check that we're not passed any unsupported specs
+        # options
+
+        my $fill = $default_fill;
+        if ( exists $specs->{$name} && exists $specs->{$name}->{fill} && defined $specs->{$name}->{fill} ) {
+            $fill = $specs->{$name}->{fill};
+        }
+
+        # fields with no maxlength will get this many characters
+        my $maxlength = 66000;
+
+        # maxlength from the HTML
+        if ( $field->type ne 'textarea' ) {
+            if ( exists $field->{maxlength} ) {
+                $maxlength = $field->{maxlength};
+                # TODO: what to do about maxlength==0 ?  non-numeric? less than 0 ?
+            }
+        }
+
+        # maxlength override from specs
+        if ( exists $specs->{$name} && exists $specs->{$name}->{maxlength} && defined $specs->{$name}->{maxlength} ) {
+            $maxlength = $specs->{$name}->{maxlength};
+            # TODO: what to do about maxlength==0 ?  non-numeric? less than 0?
+        }
+
+        # stuff it
+        if ( ($maxlength % length($fill)) == 0 ) {
+            # the simple case
+            $field->value( $fill x ($maxlength/length($fill)) );
+        }
+        else {
+            # can be improved later
+            $field->value( substr( $fill x int(($maxlength + length($fill) - 1)/length($fill)), 0, $maxlength ) );
+        }
+    } # for @inputs
+
+    return;
 }
 
 =head1 TODO

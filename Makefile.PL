@@ -13,6 +13,8 @@ WriteMakefile(
         'Test::LongString'  => '0.07',
         'URI::file'         => 0,
         'WWW::Mechanize'    => '1.00',
+        'Carp::Assert::More' => 0,
+        'HTTP::Server::Simple' => '0.07',
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Test-WWW-Mechanize-*' },

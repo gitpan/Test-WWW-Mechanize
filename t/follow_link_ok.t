@@ -2,50 +2,68 @@
 
 use strict;
 use warnings;
-use Test::More tests => 7;
+use Test::More tests => 6;
 use Test::Builder::Tester;
 use URI::file;
+
+use constant PORT => 13432;
 
 BEGIN {
     use_ok( 'Test::WWW::Mechanize' );
 }
 
+
+my $server=TWMServer->new(PORT);
+my $pid=$server->background;
+ok($pid,'HTTP Server started') or die "Can't start the server";
+
+sub cleanup { kill(9,$pid) };
+$SIG{__DIE__}=\&cleanup;
+
 FOLLOW_GOOD_LINK: {
     my $mech = Test::WWW::Mechanize->new();
     isa_ok( $mech,'Test::WWW::Mechanize' );
 
-    $mech->get_ok( URI::file->cwd().'t/goodlinks.html' );
+    $mech->get('http://localhost:'.PORT.'/goodlinks.html');
     $mech->follow_link_ok( {n=>1}, "Go after first link" );
 }
 
 #FOLLOW_BAD_LINK: {
+my $mech = Test::WWW::Mechanize->new();
+isa_ok( $mech,'Test::WWW::Mechanize' );
 TODO: {
-    my $mech = Test::WWW::Mechanize->new();
-    isa_ok( $mech,'Test::WWW::Mechanize' );
+    local $TODO = "I don't know how to get Test::Builder::Tester to handle regexes for the timestamp.";
 
-    $mech->get_ok( URI::file->cwd().'t/badlinks.html' );
+    $mech->get('http://localhost:'.PORT.'/badlinks.html');
     test_out('not ok 1 - Go after bad link');
     test_fail(+1);
     $mech->follow_link_ok( {n=>2}, "Go after bad link" );
-    local $TODO = "I don't know how to get Test::Builder::Tester to handle regexes for the timestamp.";
+    test_diag('');
     test_test('Handles bad links');
 }
 
-__DATA__
-my $links=$mech->links();
-test_out('not ok 1 - Checking all links some bad');
-test_fail(+4);
-test_diag('bad1.html');
-test_diag('bad2.html');
-test_diag('bad3.html');
-$mech->links_ok($links,'Checking all links some bad');
-test_test('Handles bad links');
+cleanup();
 
-test_out('not ok 1 - Checking specified link not found');
-test_fail(+2);
-test_diag('test2.html');
-$mech->links_ok('test2.html','Checking specified link not found');
-test_test('Handles link not found');
+{
+  package TWMServer;
+  use base 'HTTP::Server::Simple::CGI';
 
+  sub handle_request {
+    my $self=shift;
+    my $cgi=shift;
 
+    my $file=(split('/',$cgi->path_info))[-1]||'index.html';
+    $file=~s/\s+//g;
 
+    if(-r "t/html/$file") {
+      if(my $response=do { local (@ARGV, $/) = "t/html/$file"; <> }) {
+        print "HTTP/1.0 200 OK\r\n";
+        print "Content-Type: text/html\r\nContent-Length: ",
+          length($response), "\r\n\r\n", $response;
+        return;
+      }
+    }
+
+    print "HTTP/1.0 404 Not Found\r\n\r\n";
+  }
+}
