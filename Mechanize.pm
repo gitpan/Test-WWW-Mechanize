@@ -6,11 +6,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.06
+Version 1.08
 
 =cut
 
-our $VERSION = '1.06';
+our $VERSION = '1.08';
 
 =head1 SYNOPSIS
 
@@ -241,8 +241,6 @@ sub content_unlike {
 
 Tells if the page has a C<$tag> tag with the given content in its text.
 
-XXX Make the $text optional
-
 =cut
 
 sub has_tag {
@@ -266,20 +264,14 @@ Tells if the page has a C<$tag> tag with the given content in its text.
 sub has_tag_like {
     my $self = shift;
     my $tag  = shift;
-    my $text = shift;
+    my $regex = shift;
     my $desc = shift;
 
-    my $found = $self->_tag_walk( $tag, sub { $text =~ $_[0] } );
+    my $found = $self->_tag_walk( $tag, sub { $_[0] =~ $regex } );
 
     return $Test->ok( $found, $desc );
 }
 
-
-=head2 $mech->has_tag_like( $tag, $regex [, $desc ] )
-
-Tells if the page has a C<$tag> tag with text matching the given regex.
-
-=cut
 
 sub _tag_walk {
     my $self = shift;
@@ -811,27 +803,59 @@ sub stuff_inputs {
 
 Add HTML::Lint and HTML::Tidy capabilities.
 
+=head1 AUTHOR
+
+Andy Lester, C<< <andy at petdance.com> >>
+
 =head1 BUGS
 
 Please report any bugs or feature requests to
-C<bug-test-www-mechanize@rt.cpan.org>, or through the web interface at
-L<http://rt.cpan.org>.  I will be notified, and then you'll automatically
-be notified of progress on your bug as I make changes.
+C<bug-test-www-mechanize at rt.cpan.org>, or through the web interface at
+L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Test-WWW-Mechanize>.
+I will be notified, and then you'll automatically be notified of progress on
+your bug as I make changes.
 
-=head1 COPYRIGHT & LICENSE
+=head1 SUPPORT
 
-Copyright 2004 Andy Lester, All Rights Reserved.
+You can find documentation for this module with the perldoc command.
 
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+    perldoc Test::WWW::Mechanize
 
-=head1 AUTHOR
+You can also look for information at:
 
-Andy Lester, C<< <andy@petdance.com> >>
+=over 4
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/Test-WWW-Mechanize>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/Test-WWW-Mechanize>
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Test-WWW-Mechanize>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/Test-WWW-Mechanize>
+
+=back
 
 =head1 ACKNOWLEDGEMENTS
 
-Thanks to Mike O'Regan and Shawn Sorichetti for big help and chunks of code.
+Thanks to
+Mike O'Regan,
+Shawn Sorichetti
+and Chris Dolan for patches.
+
+=head1 COPYRIGHT & LICENSE
+
+Copyright 2004-2005 Andy Lester, all rights reserved.
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
 
 =cut
 

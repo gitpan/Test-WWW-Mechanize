@@ -1,6 +1,14 @@
 Revision history for Test-WWW-Mechanize
 
-1.06
+1.08
+        [FIXES]
+        * has_tag_like()'s regex was reversed, so would match when
+          it shouldn't.  Thanks to Chris Dolan.
+
+        [DOCUMENTATION]
+        * Added links to support sites.
+
+1.06    Jun 29 2005
         [INTERNALS]
         * Updated test suite to use HTTP::Server::Simple.
           Thanks to Shawn Sorichetti for it.
