@@ -6,11 +6,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.08
+Version 1.10
 
 =cut
 
-our $VERSION = '1.08';
+our $VERSION = '1.10';
 
 =head1 SYNOPSIS
 
@@ -18,6 +18,7 @@ Test::WWW::Mechanize is a subclass of L<WWW::Mechanize> that incorporates
 features for web application testing.  For example:
 
     $mech->get_ok( $page );
+    $mech->base_is( 'http://petdance.com/', 'Proper <BASE HREF>' );
     $mech->title_is( "Invoice Status", "Make sure we're on the invoice page" );
     $mech->content_contains( "Andy Lester", "My name somewhere" );
     $mech->content_like( qr/(cpan|perl)\.org/, "Link to perl.org or CPAN" );
@@ -26,6 +27,7 @@ This is equivalent to:
 
     $mech->get( $page );
     ok( $mech->success );
+    is( $mech->base, 'http://petdance.com', 'Proper <BASE HREF>' );
     is( $mech->title, "Invoice Status", "Make sure we're on the invoice page" );
     ok( index( $mech->content, "Andy Lester" ) >= 0, "My name somewhere" );
     like( $mech->content, qr/(cpan|perl)\.org/, "Link to perl.org or CPAN" );
@@ -160,6 +162,57 @@ sub title_unlike {
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
     return unlike_string( $self->title, $regex, $desc );
+}
+
+=head2 $mech->base_is( $str [, $desc ] )
+
+Tells if the base of the page is the given string.
+
+    $mech->base_is( "http://example.com/" );
+
+=cut
+
+sub base_is {
+    my $self = shift;
+    my $str = shift;
+    my $desc = shift;
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return is_string( $self->base, $str, $desc );
+}
+
+=head2 $mech->base_like( $regex [, $desc ] )
+
+Tells if the base of the page matches the given regex.
+
+    $mech->base_like( qr{http://example.com/index.php?PHPSESSID=(.+)});
+
+=cut
+
+sub base_like {
+    my $self = shift;
+    my $regex = shift;
+    my $desc = shift;
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return like_string( $self->base, $regex, $desc );
+}
+
+=head2 $mech->base_unlike( $regex [, $desc ] )
+
+Tells if the base of the page matches the given regex.
+
+    $mech->base_unlike( qr{http://example.com/index.php?PHPSESSID=(.+)});
+
+=cut
+
+sub base_unlike {
+    my $self = shift;
+    my $regex = shift;
+    my $desc = shift;
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return unlike_string( $self->base, $regex, $desc );
 }
 
 =head2 $mech->content_is( $str [, $desc ] )
@@ -513,8 +566,8 @@ an array containing L<WWW::Mechanize::Link> objects, an array of URLs,
 or a scalar URL name.
 
     my @links = $mech->links();
-    $mech->link_content_like( \@links, qr/Restricted/,
-      'Check all links are restricted' );
+    $mech->link_content_unlike( \@links, qr/Restricted/,
+      'No restricted links' );
 
 =cut
 
@@ -667,8 +720,6 @@ sub follow_link_ok {
 
 =head2 $agent->stuff_inputs( [\%options] )
 
-XXX Delete this when it winds up in Test::WWW::Mechanize
-
 Finds all free-text input fields (text, textarea, and password) in the
 current form and fills them to their maximum length in hopes of finding
 application code that can't handle it.  Fields with no maximum length
@@ -685,7 +736,7 @@ The hashref $options can contain the following keys:
 
 =item * ignore
 
-hash value is hashref of field names to not touch, e.g.:
+hash value is arrayref of field names to not touch, e.g.:
 
     $mech->stuff_inputs( {
         ignore => [qw( specialfield1 specialfield2 )],
@@ -725,29 +776,33 @@ of any maxlength specified in the HTML).
 sub stuff_inputs {
     my $self = shift;
 
-    use Carp;
-
     my $options = shift || {};
     assert_isa( $options, 'HASH' );
+    assert_in( $_, ['ignore', 'fill', 'specs'] ) foreach ( keys %$options );
 
+    # set up the fill we'll use unless a field overrides it
     my $default_fill = '@';
-    if ( exists $options->{fill} && defined $options->{fill} ) {
+    if ( exists $options->{fill} && defined $options->{fill} && length($options->{fill}) > 0 ) {
         $default_fill = $options->{fill};
-        # TODO: need to verify that length is > 0
     }
 
+    # fields in the form to not stuff
     my $ignore = {};
-    if ( exists $options->{ignore} && defined $options->{ignore} ) {
-        $ignore = $options->{ignore};
-        croak if ref $ignore ne 'HASH';
+    if ( exists $options->{ignore} ) {
+        assert_isa( $options->{ignore}, 'ARRAY' );
+        $ignore = { map {($_, 1)} @{$options->{ignore}} };
     }
 
     my $specs = {};
-    if ( exists $options->{specs} && defined $options->{specs} ) {
+    if ( exists $options->{specs} ) {
+        assert_isa( $options->{specs}, 'HASH' );
         $specs = $options->{specs};
-        croak if ref $specs ne 'HASH';
-        # TODO: verify that only valid options passed
+        foreach my $field_name ( keys %$specs ) {
+            assert_isa( $specs->{$field_name}, 'HASH' );
+            assert_in( $_, ['fill', 'maxlength'] ) foreach ( keys %{$specs->{$field_name}} );
+        }
     }
+
 
     my @inputs = $self->grep_inputs( { type => qr/^(text|textarea|password)$/ } );
 
@@ -757,16 +812,8 @@ sub stuff_inputs {
 
         my $name = $field->name();
 
-        # might be one of the fields to ignore
+        # skip if it's one of the fields to ignore
         next if exists $ignore->{ $name };
-
-        # TODO: need to check that we're not passed any unsupported specs
-        # options
-
-        my $fill = $default_fill;
-        if ( exists $specs->{$name} && exists $specs->{$name}->{fill} && defined $specs->{$name}->{fill} ) {
-            $fill = $specs->{$name}->{fill};
-        }
 
         # fields with no maxlength will get this many characters
         my $maxlength = 66000;
@@ -779,10 +826,20 @@ sub stuff_inputs {
             }
         }
 
-        # maxlength override from specs
-        if ( exists $specs->{$name} && exists $specs->{$name}->{maxlength} && defined $specs->{$name}->{maxlength} ) {
-            $maxlength = $specs->{$name}->{maxlength};
-            # TODO: what to do about maxlength==0 ?  non-numeric? less than 0?
+        my $fill = $default_fill;
+
+        if ( exists $specs->{$name} ) {
+            # process the per-field info
+
+            if ( exists $specs->{$name}->{fill} && defined $specs->{$name}->{fill} && length($specs->{$name}->{fill}) > 0 ) {
+                $fill = $specs->{$name}->{fill};
+            }
+
+            # maxlength override from specs
+            if ( exists $specs->{$name}->{maxlength} && defined $specs->{$name}->{maxlength} ) {
+                $maxlength = $specs->{$name}->{maxlength};
+                # TODO: what to do about maxlength==0 ?  non-numeric? less than 0?
+            }
         }
 
         # stuff it
@@ -847,8 +904,11 @@ L<http://search.cpan.org/dist/Test-WWW-Mechanize>
 
 Thanks to
 Mike O'Regan,
-Shawn Sorichetti
-and Chris Dolan for patches.
+Shawn Sorichetti,
+Chris Dolan,
+Matt Trout,
+MATSUNO Tokuhiro,
+and Pete Krawczyk for patches.
 
 =head1 COPYRIGHT & LICENSE
 

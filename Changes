@@ -1,6 +1,20 @@
 Revision history for Test-WWW-Mechanize
 
-1.08
+1.10    Sun Jun 18 22:58:41 CDT 2006
+        [FIXES]
+        * RT #19147: Tests turn off the http_proxy environment variable
+          before starting.  Thanks to Matt Trout.
+        * RT #18779: makes stuff_inputs() conform to the documentation,
+          changing the implementation to expect an arrayref for
+          $options->{ ignore }, as opposed to a hashref.  Thanks to
+          Mike O'Regan.
+
+        [ENHANCEMENTS]
+        * Added base_is, base_like and base_unlike.  Thanks to MATSUNO
+          Tokuhiro.
+
+
+1.08    Mon Nov 21 10:35:23 CST 2005
         [FIXES]
         * has_tag_like()'s regex was reversed, so would match when
           it shouldn't.  Thanks to Chris Dolan.
