@@ -1,5 +1,10 @@
 Revision history for Test-WWW-Mechanize
 
+1.12    Thu Jul  6 23:47:59 CDT 2006
+        [ENHANCEMENTS]
+        * Added followable_links() method to return only those links
+          that your mech can actually follow.
+
 1.10    Sun Jun 18 22:58:41 CDT 2006
         [FIXES]
         * RT #19147: Tests turn off the http_proxy environment variable

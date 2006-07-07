@@ -6,11 +6,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.10
+Version 1.12
 
 =cut
 
-our $VERSION = '1.10';
+our $VERSION = '1.12';
 
 =head1 SYNOPSIS
 
@@ -90,13 +90,16 @@ sub get_ok {
 
         if ( !defined( $flex ) ) {
             $desc = shift;
-        } elsif ( ref $flex eq 'HASH' ) {
+        }
+        elsif ( ref $flex eq 'HASH' ) {
             %opts = %$flex;
             $desc = shift;
-        } elsif ( ref $flex eq 'ARRAY' ) {
+        }
+        elsif ( ref $flex eq 'ARRAY' ) {
             %opts = @$flex;
             $desc = shift;
-        } else {
+        }
+        else {
             $desc = $flex;
         }
     } # parms left
@@ -340,6 +343,19 @@ sub _tag_walk {
     return;
 }
 
+=head2 $mech->followable_links()
+
+Returns a list of links that Mech can follow.  This is only http and
+https links.
+
+=cut
+
+sub followable_links {
+    my $self = shift;
+
+    return $self->find_all_links( url_abs_regex => qr[^https?://] );
+}
+
 =head2 $mech->page_links_ok( [ $desc ] )
 
 Follow all links on the current page and test for HTTP status 200
@@ -352,7 +368,7 @@ sub page_links_ok {
     my $self = shift;
     my $desc = shift;
 
-    my @links = $self->links();
+    my @links = $self->followable_links();
     my @urls = _format_links(\@links);
 
     my @failures = $self->_check_links_status( \@urls );
@@ -385,7 +401,7 @@ sub page_links_content_like {
         return $ok;
     }
 
-    my @links = $self->links();
+    my @links = $self->followable_links();
     my @urls = _format_links(\@links);
 
     my @failures = $self->_check_links_content( \@urls, $regex );
@@ -419,7 +435,7 @@ sub page_links_content_unlike {
         return $ok;
     }
 
-    my @links = $self->links();
+    my @links = $self->followable_links();
     my @urls = _format_links(\@links);
 
     my @failures = $self->_check_links_content( \@urls, $regex, 'unlike' );
@@ -470,7 +486,7 @@ passed.  The links may be specified as a reference to an array
 containing L<WWW::Mechanize::Link> objects, an array of URLs, or a
 scalar URL name.
 
-    my @links = $mech->links();
+    my @links = $mech->followable_links();
     $mech->link_status_is( \@links, 403,
       'Check all links are restricted' );
 
@@ -499,7 +515,7 @@ passed.  The links may be specified as a reference to an array
 containing L<WWW::Mechanize::Link> objects, an array of URLs, or a
 scalar URL name.
 
-    my @links = $mech->links();
+    my @links = $mech->followable_links();
     $mech->link_status_isnt( \@links, 404,
       'Check all links are not 404' );
 
@@ -529,7 +545,7 @@ each against I<$regex>.  The links may be specified as a reference to
 an array containing L<WWW::Mechanize::Link> objects, an array of URLs,
 or a scalar URL name.
 
-    my @links = $mech->links();
+    my @links = $mech->followable_links();
     $mech->link_content_like( \@links, qr/Restricted/,
         'Check all links are restricted' );
 
@@ -565,7 +581,7 @@ does not match I<$regex>.  The links may be specified as a reference to
 an array containing L<WWW::Mechanize::Link> objects, an array of URLs,
 or a scalar URL name.
 
-    my @links = $mech->links();
+    my @links = $mech->followable_links();
     $mech->link_content_unlike( \@links, qr/Restricted/,
       'No restricted links' );
 
@@ -611,11 +627,13 @@ sub _check_links_status {
         if ( $mech->follow_link( url => $url ) ) {
             if ( $test eq 'is' ) {
                 push( @failures, $url ) unless $mech->status() == $status;
-            } else {
+            }
+            else {
                 push( @failures, $url ) unless $mech->status() != $status;
             }
             $mech->back();
-        } else {
+        }
+        else {
             push( @failures, $url );
         }
     } # for
@@ -640,11 +658,13 @@ sub _check_links_content {
             my $content=$mech->content();
             if ( $test eq 'like' ) {
                 push( @failures, $url ) unless $content=~/$regex/;
-            } else {
+            }
+            else {
                 push( @failures, $url ) unless $content!~/$regex/;
             }
             $mech->back();
-        } else {
+        }
+        else {
             push( @failures, $url );
         }
     } # for
@@ -661,11 +681,13 @@ sub _format_links {
         if(defined($$links[0])) {
             if(ref($$links[0]) eq 'WWW::Mechanize::Link') {
                 @urls=map { $_->url() } @$links;
-            } else {
+            }
+            else {
                 @urls=@$links;
             }
         }
-    } else {
+    }
+    else {
         push(@urls,$links);
     }
     return @urls;
@@ -704,10 +726,12 @@ sub follow_link_ok {
     my $error;
     if ( !$response ) {
         $error = "No matching link found";
-    } else {
+    }
+    else {
         if ( !$response->is_success ) {
             $error = $response->as_string;
-        } else {
+        }
+        else {
             $ok = 1;
         }
     }
