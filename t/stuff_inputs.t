@@ -18,14 +18,14 @@ my $server=TWMServer->new(PORT);
 my $pid=$server->background;
 ok($pid,'HTTP Server started') or die "Can't start the server";
 
-sub cleanup { kill(9,$pid) };
+sub cleanup { kill(9,$pid) if !$^S };
 $SIG{__DIE__}=\&cleanup;
 
 my $mech=Test::WWW::Mechanize->new();
 isa_ok( $mech, 'Test::WWW::Mechanize' );
 
 $mech->get('http://localhost:'.PORT.'/form.html');
-#$mech->stuff_inputs();
+$mech->stuff_inputs();
 
 
 cleanup();

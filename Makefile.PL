@@ -12,10 +12,20 @@ WriteMakefile(
         'Test::More'        => 0,
         'Test::LongString'  => '0.07',
         'URI::file'         => 0,
-        'WWW::Mechanize'    => '1.00',
+        'WWW::Mechanize'    => '1.24',
         'Carp::Assert::More' => 0,
         'HTTP::Server::Simple' => '0.07',
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Test-WWW-Mechanize-*' },
 );
+
+sub MY::postamble {
+    return <<'MAKE_FRAG';
+.PHONY: critic
+
+critic:
+	perlcritic -1 -q -profile perlcriticrc bin/ lib/ t/
+
+MAKE_FRAG
+}

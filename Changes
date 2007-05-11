@@ -1,9 +1,37 @@
 Revision history for Test-WWW-Mechanize
 
+1.14    Fri May 11 16:22:02 CDT 2007
+
+        [FIXES]
+        * Fixes test failures.  Thanks to Mark Blackman for RT #26602:
+
+            The module tests currently spawn a server (based on
+            HTTP::Server::Simple::CGI) which is killed when a __DIE__
+            signal is received, normally only when the invoking
+            perl dies. However, as perlvar makes clear, the __DIE__
+            signal is received when eval blocks die as well. The
+            new version (1.22) of WWW::Mechanize now calles
+            HTTP::Message::decoded_content which calls Encode.pm
+            which has a eval block that require's Encode::ConfigLocal
+            which is usually not present, so the eval dies and the
+            HTTP server is killed as soon as the $mech object tries
+            to do a 'get'. It's simple to use a system variable,
+            $^S to find out if the __DIE__ signal is being called
+            for an eval so we ignore that case with the patch
+            attached.
+
+        * The stuff_inputs() function now actually works.
+
+        [DOCUMENTATION]
+        * Made the synopsis show that T:W:M doesn't take the tests=>$x
+          like other Test::* modules.  It'd be nice if it did, though.
+
+
 1.12    Thu Jul  6 23:47:59 CDT 2006
         [ENHANCEMENTS]
         * Added followable_links() method to return only those links
           that your mech can actually follow.
+
 
 1.10    Sun Jun 18 22:58:41 CDT 2006
         [FIXES]

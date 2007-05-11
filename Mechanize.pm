@@ -6,17 +6,21 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.12
+Version 1.14
 
 =cut
 
-our $VERSION = '1.12';
+our $VERSION = '1.14';
 
 =head1 SYNOPSIS
 
 Test::WWW::Mechanize is a subclass of L<WWW::Mechanize> that incorporates
 features for web application testing.  For example:
 
+    use Test::More tests => 5;
+    use Test::WWW::Mechanize;
+
+    my $mech = Test::WWW::Mechanize->new;
     $mech->get_ok( $page );
     $mech->base_is( 'http://petdance.com/', 'Proper <BASE HREF>' );
     $mech->title_is( "Invoice Status", "Make sure we're on the invoice page" );
@@ -25,6 +29,10 @@ features for web application testing.  For example:
 
 This is equivalent to:
 
+    use Test::More tests => 5;
+    use WWW::Mechanize;
+
+    my $mech = WWW::Mechanize->new;
     $mech->get( $page );
     ok( $mech->success );
     is( $mech->base, 'http://petdance.com', 'Proper <BASE HREF>' );
@@ -39,9 +47,9 @@ but has nicer diagnostics if they fail.
 use warnings;
 use strict;
 
-use WWW::Mechanize;
-use Test::LongString 0.07;
-use Test::Builder;
+use WWW::Mechanize ();
+use Test::LongString;
+use Test::Builder ();
 use Carp::Assert::More;
 
 use base 'WWW::Mechanize';
@@ -449,7 +457,7 @@ sub page_links_content_unlike {
 
 =head2 $mech->links_ok( $links [, $desc ] )
 
-Check the current page for specified links and test for HTTP status
+Follow specified links on the current page and test for HTTP status
 200.  The links may be specified as a reference to an array containing
 L<WWW::Mechanize::Link> objects, an array of URLs, or a scalar URL
 name.
@@ -481,7 +489,7 @@ sub links_ok {
 
 =head2 $mech->link_status_is( $links, $status [, $desc ] )
 
-Check the current page for specified links and test for HTTP status
+Follow specified links on the current page and test for HTTP status
 passed.  The links may be specified as a reference to an array
 containing L<WWW::Mechanize::Link> objects, an array of URLs, or a
 scalar URL name.
@@ -510,7 +518,7 @@ sub link_status_is {
 
 =head2 $mech->link_status_isnt( $links, $status [, $desc ] )
 
-Check the current page for specified links and test for HTTP status
+Follow specified links on the current page and test for HTTP status
 passed.  The links may be specified as a reference to an array
 containing L<WWW::Mechanize::Link> objects, an array of URLs, or a
 scalar URL name.
@@ -540,10 +548,10 @@ sub link_status_isnt {
 
 =head2 $mech->link_content_like( $links, $regex [, $desc ] )
 
-Check the current page for specified links and test the content of
-each against I<$regex>.  The links may be specified as a reference to
-an array containing L<WWW::Mechanize::Link> objects, an array of URLs,
-or a scalar URL name.
+Follow specified links on the current page and test the resulting
+content of each against I<$regex>.  The links may be specified as a
+reference to an array containing L<WWW::Mechanize::Link> objects, an
+array of URLs, or a scalar URL name.
 
     my @links = $mech->followable_links();
     $mech->link_content_like( \@links, qr/Restricted/,
@@ -576,10 +584,10 @@ sub link_content_like {
 
 =head2 $mech->link_content_unlike( $links, $regex [, $desc ] )
 
-Check the current page for specified links and test the content of each
-does not match I<$regex>.  The links may be specified as a reference to
-an array containing L<WWW::Mechanize::Link> objects, an array of URLs,
-or a scalar URL name.
+Follow specified links on the current page and test that the resulting
+content of each does not match I<$regex>.  The links may be specified as a
+reference to an array containing L<WWW::Mechanize::Link> objects, an array
+of URLs, or a scalar URL name.
 
     my @links = $mech->followable_links();
     $mech->link_content_unlike( \@links, qr/Restricted/,
@@ -693,7 +701,7 @@ sub _format_links {
     return @urls;
 }
 
-=head2 follow_link_ok( \%parms [, $comment] )
+=head2 $mech->follow_link_ok( \%parms [, $comment] )
 
 Makes a C<follow_link()> call and executes tests on the results.
 The link must be found, and then followed successfully.  Otherwise,
@@ -703,7 +711,7 @@ I<%parms> is a hashref containing the parms to pass to C<follow_link()>.
 Note that the parms to C<follow_link()> are a hash whereas the parms to
 this function are a hashref.  You have to call this function like:
 
-    $agent->follow_link_ok( {n=>3}, "looking for 3rd link" );
+    $mech->follow_link_ok( {n=>3}, "looking for 3rd link" );
 
 As with other test functions, C<$comment> is optional.  If it is supplied
 then it will display when running the test harness in verbose mode.
@@ -742,7 +750,7 @@ sub follow_link_ok {
     return $ok;
 }
 
-=head2 $agent->stuff_inputs( [\%options] )
+=head2 $mech->stuff_inputs( [\%options] )
 
 Finds all free-text input fields (text, textarea, and password) in the
 current form and fills them to their maximum length in hopes of finding
@@ -827,8 +835,7 @@ sub stuff_inputs {
         }
     }
 
-
-    my @inputs = $self->grep_inputs( { type => qr/^(text|textarea|password)$/ } );
+    my @inputs = $self->find_all_inputs( type => qr/^(text|textarea|password)$/ );
 
     foreach my $field ( @inputs ) {
         next if $field->readonly();
@@ -927,6 +934,8 @@ L<http://search.cpan.org/dist/Test-WWW-Mechanize>
 =head1 ACKNOWLEDGEMENTS
 
 Thanks to
+Michael Schwern,
+Mark Blackman,
 Mike O'Regan,
 Shawn Sorichetti,
 Chris Dolan,
@@ -936,7 +945,7 @@ and Pete Krawczyk for patches.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2004-2005 Andy Lester, all rights reserved.
+Copyright 2004-2007 Andy Lester, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
