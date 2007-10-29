@@ -9,12 +9,13 @@ WriteMakefile(
     ABSTRACT_FROM       => 'Mechanize.pm',
     PL_FILES            => {},
     PREREQ_PM => {
-        'Test::More'        => 0,
-        'Test::LongString'  => '0.07',
-        'URI::file'         => 0,
-        'WWW::Mechanize'    => '1.24',
-        'Carp::Assert::More' => 0,
-        'HTTP::Server::Simple' => '0.07',
+        'Carp::Assert::More'    => 0,
+        'HTTP::Server::Simple'  => '0.07',
+        'Test::Builder::Tester' => '1.09',
+        'Test::LongString'      => '0.07',
+        'Test::More'            => 0,
+        'URI::file'             => 0,
+        'WWW::Mechanize'        => '1.24',
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Test-WWW-Mechanize-*' },
@@ -22,10 +23,17 @@ WriteMakefile(
 
 sub MY::postamble {
     return <<'MAKE_FRAG';
-.PHONY: critic
+.PHONY: critic tags
 
 critic:
 	perlcritic -1 -q -profile perlcriticrc bin/ lib/ t/
+
+tags:
+	ctags -f tags --recurse --totals \
+		--exclude=blib \
+		--exclude=.svn \
+		--exclude='*~' \
+		--languages=Perl --langmap=Perl:+.t \
 
 MAKE_FRAG
 }

@@ -1,43 +1,32 @@
-#!perl -w
+#!perl
 
 use strict;
 use warnings;
-use Test::More tests => 5;
+use Test::More 'no_plan';
 use Test::Builder::Tester;
 use URI::file;
 
 use constant PORT => 13432;
-$ENV{http_proxy} = ''; # All our tests are running on localhost
 
 BEGIN {
     use_ok( 'Test::WWW::Mechanize' );
 }
 
+
 my $server=TWMServer->new(PORT);
 my $pid=$server->background;
 ok($pid,'HTTP Server started') or die "Can't start the server";
 
-sub cleanup { kill(9,$pid) if !$^S };
+sub cleanup { kill(9,$pid) };
 $SIG{__DIE__}=\&cleanup;
 
-my $mech=Test::WWW::Mechanize->new();
-isa_ok($mech,'Test::WWW::Mechanize');
+SUBMIT_GOOD_FORM: {
+    my $mech = Test::WWW::Mechanize->new();
+    isa_ok( $mech,'Test::WWW::Mechanize' );
 
-$mech->get('http://localhost:'.PORT.'/goodlinks.html');
-
-# test regex
-test_out( 'ok 1 - Does it say Mungo eats cheese?' );
-$mech->content_lacks( 'Mungo eats cheese', "Does it say Mungo eats cheese?" );
-test_test( "Finds the lacks" );
-
-
-test_out(  "not ok 1 - Shouldn't say it's a test page" );
-test_fail(+4);
-test_diag(q(    searched: "<html>\x{0a}  <head>\x{0a}    <title>Test Page</title>\x{0a}  </h"...) );
-test_diag(q(   and found: "Test Page") );
-test_diag(q( at position: 27) );
-$mech->content_lacks( 'Test Page', "Shouldn't say it's a test page" );
-test_test( "Handles not finding it" );
+    $mech->get('http://localhost:'.PORT.'/form.html');
+    $mech->submit_form_ok( {form_number =>1}, "Submit First Form" );
+}
 
 cleanup();
 

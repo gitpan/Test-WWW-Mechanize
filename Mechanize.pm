@@ -6,11 +6,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.14
+Version 1.16
 
 =cut
 
-our $VERSION = '1.14';
+our $VERSION = '1.16';
 
 =head1 SYNOPSIS
 
@@ -50,6 +50,7 @@ use strict;
 use WWW::Mechanize ();
 use Test::LongString;
 use Test::Builder ();
+use Carp ();
 use Carp::Assert::More;
 
 use base 'WWW::Mechanize';
@@ -75,7 +76,7 @@ sub new {
     return $self;
 }
 
-=head1 METHODS
+=head1 METHODS: GETTING & POSTING
 
 =head2 $mech->get_ok($url, [ \%LWP_options ,] $desc)
 
@@ -83,6 +84,8 @@ A wrapper around WWW::Mechanize's get(), with similar options, except
 the second argument needs to be a hash reference, not a hash. Like
 well-behaved C<*_ok()> functions, it returns true if the test passed,
 or false if not.
+
+A default description of "GET $url" is used if none if provided.
 
 =cut
 
@@ -115,6 +118,7 @@ sub get_ok {
     $self->get( $url, %opts );
     my $ok = $self->success;
 
+    $desc = "GET $url" unless defined $desc;
     $Test->ok( $ok, $desc );
     if ( !$ok ) {
         $Test->diag( $self->status );
@@ -123,6 +127,208 @@ sub get_ok {
 
     return $ok;
 }
+
+=head2 $mech->post_ok( $url, [ \%LWP_options ,] $desc )
+
+A wrapper around WWW::Mechanize's post(), with similar options, except
+the second argument needs to be a hash reference, not a hash. Like
+well-behaved C<*_ok()> functions, it returns true if the test passed,
+or false if not.
+
+A default description of "POST to $url" is used if none if provided.
+
+=cut
+
+sub post_ok {
+    my $self = shift;
+    my $url = shift;
+
+    my $desc;
+    my %opts;
+
+    if ( @_ ) {
+        my $flex = shift; # The flexible argument
+
+        if ( !defined( $flex ) ) {
+            $desc = shift;
+        }
+        elsif ( ref $flex eq 'HASH' ) {
+            %opts = %$flex;
+            $desc = shift;
+        }
+        elsif ( ref $flex eq 'ARRAY' ) {
+            %opts = @$flex;
+            $desc = shift;
+        }
+        else {
+            $desc = $flex;
+        }
+    } # parms left
+
+    $desc = "POST to $url" unless defined $desc;
+    $self->post( $url, \%opts );
+    my $ok = $self->success;
+    $Test->ok( $ok, $desc );
+    if ( !$ok ) {
+        $Test->diag( $self->status );
+        $Test->diag( $self->response->message ) if $self->response;
+    }
+
+    return $ok;
+}
+
+
+=head2 submit_form_ok( \%parms [, $comment] )
+
+Makes a C<submit_form()> call and executes tests on the results.
+The form must be found, and then submitted successfully.  Otherwise,
+this test fails.
+
+I<%parms> is a hashref containing the parms to pass to C<submit_form()>.
+Note that the parms to C<submit_form()> are a hash whereas the parms to
+this function are a hashref.  You have to call this function like:
+
+    $agent->submit_form_ok( {n=>3}, "looking for 3rd link" );
+
+As with other test functions, C<$comment> is optional.  If it is supplied
+then it will display when running the test harness in verbose mode.
+
+Returns true value if the specified link was found and followed
+successfully.  The L<HTTP::Response> object returned by submit_form()
+is not available.
+
+=cut
+
+sub submit_form_ok {
+    my $self = shift;
+    my $parms = shift || {};
+    my $comment = shift;
+
+    if ( ref $parms ne 'HASH' ) {
+       Carp::croak "FATAL: parameters must be given as a hashref";
+    }
+
+    # return from submit_form() is an HTTP::Response or undef
+    my $response = $self->submit_form( %$parms );
+
+    my $ok;
+    my $error;
+    if ( !$response ) {
+        $error = "No matching form found";
+    }
+    else {
+        if ( $response->is_success ) {
+            $ok = 1;
+        }
+        else {
+            $error = $response->as_string;
+        }
+    }
+
+    $Test->ok( $ok, $comment );
+    $Test->diag( $error ) if $error;
+
+    return $ok;
+}
+
+
+=head2 $mech->follow_link_ok( \%parms [, $comment] )
+
+Makes a C<follow_link()> call and executes tests on the results.
+The link must be found, and then followed successfully.  Otherwise,
+this test fails.
+
+I<%parms> is a hashref containing the parms to pass to C<follow_link()>.
+Note that the parms to C<follow_link()> are a hash whereas the parms to
+this function are a hashref.  You have to call this function like:
+
+    $mech->follow_link_ok( {n=>3}, "looking for 3rd link" );
+
+As with other test functions, C<$comment> is optional.  If it is supplied
+then it will display when running the test harness in verbose mode.
+
+Returns a true value if the specified link was found and followed
+successfully.  The L<HTTP::Response> object returned by follow_link()
+is not available.
+
+=cut
+
+sub follow_link_ok {
+    my $self = shift;
+    my $parms = shift || {};
+    my $comment = shift;
+
+    if ( ref $parms ne 'HASH' ) {
+       Carp::croak "FATAL: parameters must be given as a hashref";
+    }
+
+    # return from follow_link() is an HTTP::Response or undef
+    my $response = $self->follow_link( %$parms );
+
+    my $ok;
+    my $error;
+    if ( !$response ) {
+        $error = "No matching link found";
+    }
+    else {
+        if ( $response->is_success ) {
+            $ok = 1;
+        }
+        else {
+            $error = $response->as_string;
+        }
+    }
+
+    $Test->ok( $ok, $comment );
+    $Test->diag( $error ) if $error;
+
+    return $ok;
+}
+
+=head1 METHODS: CONTENT CHECKING
+
+=head2 html_lint_ok( [$msg] )
+
+Checks the validity of the HTML on the current page.  If the page is not
+HTML, then it fails.
+
+The URI is automatically appended to the I<$msg>.
+
+=cut
+
+sub html_lint_ok {
+    my $self = shift;
+    my $msg = shift;
+
+    my $uri = $self->uri;
+    $msg = $msg ? "$msg ($uri)" : $uri;
+
+    my $ok;
+
+    if ( $self->is_html ) {
+        require HTML::Lint;
+
+        my $lint = HTML::Lint->new;
+        $lint->newfile( $uri );
+        $lint->parse( $self->content );
+
+        my @errors = $lint->errors;
+        if ( @errors ) {
+            $ok = $Test->ok( 0, $msg );
+            $Test->diag( $_->as_string ) for @errors;
+        }
+        else {
+            $ok = $Test->ok( 1, $msg );
+        }
+    }
+    else {
+        $ok = $Test->ok( 0, $msg );
+        $Test->diag( q{This page doesn't appear to be HTML, or didn't get the proper text/html content type returned.} );
+    }
+
+    return $ok;
+}
+
 
 =head2 $mech->title_is( $str [, $desc ] )
 
@@ -388,7 +594,7 @@ sub page_links_ok {
     return $ok;
 }
 
-=head2 $mech->page_links_content_like( $regex,[ $desc ] )
+=head2 $mech->page_links_content_like( $regex [, $desc ] )
 
 Follow all links on the current page and test their contents for I<$regex>.
 
@@ -421,7 +627,7 @@ sub page_links_content_like {
     return $ok;
 }
 
-=head2 $mech->page_links_content_unlike( $regex,[ $desc ] )
+=head2 $mech->page_links_content_unlike( $regex [, $desc ] )
 
 Follow all links on the current page and test their contents do not
 contain the specified regex.
@@ -701,55 +907,6 @@ sub _format_links {
     return @urls;
 }
 
-=head2 $mech->follow_link_ok( \%parms [, $comment] )
-
-Makes a C<follow_link()> call and executes tests on the results.
-The link must be found, and then followed successfully.  Otherwise,
-this test fails.
-
-I<%parms> is a hashref containing the parms to pass to C<follow_link()>.
-Note that the parms to C<follow_link()> are a hash whereas the parms to
-this function are a hashref.  You have to call this function like:
-
-    $mech->follow_link_ok( {n=>3}, "looking for 3rd link" );
-
-As with other test functions, C<$comment> is optional.  If it is supplied
-then it will display when running the test harness in verbose mode.
-
-Returns true value if the specified link was found and followed
-successfully.  The HTTP::Response object returned by follow_link()
-is not available.
-
-=cut
-
-sub follow_link_ok {
-    my $self = shift;
-    my $parms = shift || {};
-    my $comment = shift;
-
-    # return from follow_link() is an HTTP::Response or undef
-    my $response = $self->follow_link( %$parms );
-
-    my $ok;
-    my $error;
-    if ( !$response ) {
-        $error = "No matching link found";
-    }
-    else {
-        if ( !$response->is_success ) {
-            $error = $response->as_string;
-        }
-        else {
-            $ok = 1;
-        }
-    }
-
-    $Test->ok( $ok, $comment );
-    $Test->diag( $error ) if $error;
-
-    return $ok;
-}
-
 =head2 $mech->stuff_inputs( [\%options] )
 
 Finds all free-text input fields (text, textarea, and password) in the
@@ -889,7 +1046,9 @@ sub stuff_inputs {
 
 =head1 TODO
 
-Add HTML::Lint and HTML::Tidy capabilities.
+Add HTML::Tidy capabilities.
+
+Add a broken image check.
 
 =head1 AUTHOR
 
@@ -898,9 +1057,8 @@ Andy Lester, C<< <andy at petdance.com> >>
 =head1 BUGS
 
 Please report any bugs or feature requests to
-C<bug-test-www-mechanize at rt.cpan.org>, or through the web interface at
-L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Test-WWW-Mechanize>.
-I will be notified, and then you'll automatically be notified of progress on
+<http://code.google.com/p/www-mechanize/issues/list>.  I will be
+notified, and then you'll automatically be notified of progress on
 your bug as I make changes.
 
 =head1 SUPPORT
@@ -913,6 +1071,14 @@ You can also look for information at:
 
 =over 4
 
+=item * Google Code bug tracker
+
+L<http://code.google.com/p/www-mechanize/issues/list>
+
+Please note that WWW::Mechanize and Test::WWW::Mechanize do NOT use
+rt.cpan.org at
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Test-WWW-Mechanize>
+
 =item * AnnoCPAN: Annotated CPAN documentation
 
 L<http://annocpan.org/dist/Test-WWW-Mechanize>
@@ -920,10 +1086,6 @@ L<http://annocpan.org/dist/Test-WWW-Mechanize>
 =item * CPAN Ratings
 
 L<http://cpanratings.perl.org/d/Test-WWW-Mechanize>
-
-=item * RT: CPAN's request tracker
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Test-WWW-Mechanize>
 
 =item * Search CPAN
 
@@ -934,6 +1096,7 @@ L<http://search.cpan.org/dist/Test-WWW-Mechanize>
 =head1 ACKNOWLEDGEMENTS
 
 Thanks to
+Greg Sheard,
 Michael Schwern,
 Mark Blackman,
 Mike O'Regan,
