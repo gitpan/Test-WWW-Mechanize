@@ -17,7 +17,7 @@ BEGIN {
 
 BEGIN {
     $ENV{http_proxy} = ''; # All our tests are running on localhost
-    plan tests => 11;
+    plan tests => 12;
     use_ok( 'Test::WWW::Mechanize' );
 }
 
@@ -25,6 +25,7 @@ BEGIN {
 my $server=TWMServer->new(PORT);
 my $pid=$server->background;
 ok( $pid,'HTTP Server started' ) or die "Can't start the server";
+sleep 1; # $server->background() may come back prematurely, so give it a second to fire up
 
 sub cleanup { kill(9,$pid) if !$^S };
 $SIG{__DIE__}=\&cleanup;
@@ -43,6 +44,11 @@ GOOD_GET: {
     test_test('Gets existing URI and reports success');
     is( ref($ok), '', "get_ok() should only return a scalar" );
     ok( $ok, "And the result should be true" );
+
+    # default desc
+    test_out("ok 1 - GET $goodlinks");
+    $mech->get_ok($goodlinks);
+    test_test('Gets existing URI and reports success - default desc');
 }
 
 BAD_GET: {

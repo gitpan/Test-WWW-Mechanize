@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::Builder::Tester;
 use URI::file;
 
@@ -16,6 +16,7 @@ BEGIN {
 my $server=TWMServer->new(PORT);
 my $pid=$server->background;
 ok($pid,'HTTP Server started') or die "Can't start the server";
+sleep 1; # $server->background() may come back prematurely, so give it a second to fire up
 
 sub cleanup { kill(9,$pid) if !$^S };
 $SIG{__DIE__}=\&cleanup;
@@ -30,6 +31,10 @@ test_out( 'ok 1 - Does it say test page?' );
 $mech->content_contains( 'Test Page', "Does it say test page?" );
 test_test( "Finds the contains" );
 
+# default desc
+test_out( 'ok 1 - Content contains "Test Page"' );
+$mech->content_contains( 'Test Page');
+test_test( "Finds the contains - default desc" );
 
 test_out( 'not ok 1 - Where is Mungo?' );
 test_fail(+3);

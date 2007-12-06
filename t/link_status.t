@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Test::Builder::Tester;
 use URI::file;
 
@@ -17,6 +17,7 @@ BEGIN {
 my $server=TWMServer->new(PORT);
 my $pid=$server->background;
 ok($pid,'HTTP Server started') or die "Can't start the server";
+sleep 1; # $server->background() may come back prematurely, so give it a second to fire up
 
 sub cleanup { kill(9,$pid) if !$^S };
 $SIG{__DIE__}=\&cleanup;
@@ -31,6 +32,11 @@ my $links=$mech->links();
 test_out('ok 1 - Checking all links status are 200');
 $mech->link_status_is($links,200,'Checking all links status are 200');
 test_test('Handles All Links successful');
+
+# Good links - Default desc
+test_out('ok 1 - ' . scalar(@$links) . ' links have status 200');
+$mech->link_status_is($links,200);
+test_test('Handles All Links successful - default desc');
 
 $mech->link_status_isnt($links,404,'Checking all links isnt');
 

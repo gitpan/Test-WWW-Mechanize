@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 7;
+use Test::More tests => 8;
 use Test::Builder::Tester;
 use URI::file;
 
@@ -17,6 +17,8 @@ BEGIN {
 my $server=TWMServer->new(PORT);
 my $pid=$server->background;
 ok($pid,'HTTP Server started') or die "Can't start the server";
+# $server->background() may come back prematurely, so give it a second to fire up
+sleep 1;
 
 sub cleanup { kill(9,$pid) if !$^S };
 $SIG{__DIE__}=\&cleanup;
@@ -29,6 +31,11 @@ $mech->get('http://localhost:'.PORT.'/goodlinks.html');
 test_out( 'ok 1 - looking for "Test" link' );
 $mech->has_tag( h1 => 'Test Page', 'looking for "Test" link' );
 test_test( 'Handles finding tag by content' );
+
+# default desc
+test_out( 'ok 1 - Page has h1 tag with \'Test Page\'' );
+$mech->has_tag( h1 => 'Test Page' );
+test_test( 'Handles finding tag by content - default desc' );
 
 test_out( 'not ok 1 - looking for "Quiz" link' );
 test_fail( +1 );

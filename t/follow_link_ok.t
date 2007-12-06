@@ -13,10 +13,10 @@ BEGIN {
     use_ok( 'Test::WWW::Mechanize' );
 }
 
-
 my $server=TWMServer->new(PORT);
 my $pid=$server->background;
 ok($pid,'HTTP Server started') or die "Can't start the server";
+sleep 1; # $server->background() may come back prematurely, so give it a second to fire up
 
 sub cleanup { kill(9,$pid) if !$^S };
 $SIG{__DIE__}=\&cleanup;
@@ -29,10 +29,9 @@ FOLLOW_GOOD_LINK: {
     $mech->follow_link_ok( {n=>1}, "Go after first link" );
 }
 
-#FOLLOW_BAD_LINK: {
-my $mech = Test::WWW::Mechanize->new();
-isa_ok( $mech,'Test::WWW::Mechanize' );
-TODO: {
+FOLLOW_BAD_LINK: {
+    my $mech = Test::WWW::Mechanize->new();
+    isa_ok( $mech, 'Test::WWW::Mechanize' );
     local $TODO = "I don't know how to get Test::Builder::Tester to handle regexes for the timestamp.";
 
     $mech->get('http://localhost:'.PORT.'/badlinks.html');
