@@ -22,15 +22,15 @@ sub cleanup { kill(9,$pid) if !$^S };
 $SIG{__DIE__}=\&cleanup;
 
 FOLLOW_GOOD_LINK: {
-    my $mech = Test::WWW::Mechanize->new();
+    my $mech = Test::WWW::Mechanize->new( autocheck => 0 );
     isa_ok( $mech,'Test::WWW::Mechanize' );
 
     $mech->get('http://localhost:'.PORT.'/goodlinks.html');
-    $mech->follow_link_ok( {n=>1}, "Go after first link" );
+    $mech->follow_link_ok( {n=>1}, 'Go after first link' );
 }
 
 FOLLOW_BAD_LINK: {
-    my $mech = Test::WWW::Mechanize->new();
+    my $mech = Test::WWW::Mechanize->new( autocheck => 0 );
     isa_ok( $mech, 'Test::WWW::Mechanize' );
     local $TODO = "I don't know how to get Test::Builder::Tester to handle regexes for the timestamp.";
 

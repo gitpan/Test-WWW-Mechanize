@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 6;
+use Test::More tests => 5;
 use Test::Builder::Tester;
 use URI::file;
 
@@ -15,15 +15,14 @@ BEGIN {
 }
 
 my $server=TWMServer->new(PORT);
-my $pid=$server->background;
-ok($pid,'HTTP Server started') or die "Can't start the server";
+my $pid=$server->background or die q{Can't start the server};
 # Pause a second in case $server->background() came back too fast
 sleep 1;
 
 sub cleanup { kill(9,$pid) if !$^S };
 $SIG{__DIE__}=\&cleanup;
 
-my $mech=Test::WWW::Mechanize->new();
+my $mech=Test::WWW::Mechanize->new( autocheck => 0 );
 
 isa_ok($mech,'Test::WWW::Mechanize');
 

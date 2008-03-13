@@ -1,5 +1,8 @@
 package Test::WWW::Mechanize;
 
+use strict;
+use warnings;
+
 =head1 NAME
 
 Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
@@ -10,7 +13,7 @@ Version 1.18
 
 =cut
 
-our $VERSION = '1.18';
+our $VERSION = '1.20';
 
 =head1 SYNOPSIS
 
@@ -60,9 +63,6 @@ results in
     ok - Content is like '(?-xism:(cpan|perl)\.org)'
 
 =cut
-
-use warnings;
-use strict;
 
 use WWW::Mechanize ();
 use Test::LongString;
@@ -120,11 +120,11 @@ sub get_ok {
             $desc = shift;
         }
         elsif ( ref $flex eq 'HASH' ) {
-            %opts = %$flex;
+            %opts = %{$flex};
             $desc = shift;
         }
         elsif ( ref $flex eq 'ARRAY' ) {
-            %opts = @$flex;
+            %opts = @{$flex};
             $desc = shift;
         }
         else {
@@ -173,11 +173,11 @@ sub post_ok {
             $desc = shift;
         }
         elsif ( ref $flex eq 'HASH' ) {
-            %opts = %$flex;
+            %opts = %{$flex};
             $desc = shift;
         }
         elsif ( ref $flex eq 'ARRAY' ) {
-            %opts = @$flex;
+            %opts = @{$flex};
             $desc = shift;
         }
         else {
@@ -232,7 +232,7 @@ sub submit_form_ok {
     }
 
     # return from submit_form() is an HTTP::Response or undef
-    my $response = $self->submit_form( %$parms );
+    my $response = $self->submit_form( %{$parms} );
 
     my $ok;
     my $error;
@@ -282,7 +282,7 @@ sub follow_link_ok {
     my $desc = shift;
 
     if (!defined($desc)) {
-        my $parms_str = join(", ", map { join("=", $_, $parms->{$_}) } keys(%$parms));
+        my $parms_str = join(", ", map { join("=", $_, $parms->{$_}) } keys(%{$parms}));
         $desc = "Followed link with '$parms_str'" if !defined($desc);
     }
 
@@ -291,7 +291,7 @@ sub follow_link_ok {
     }
 
     # return from follow_link() is an HTTP::Response or undef
-    my $response = $self->follow_link( %$parms );
+    my $response = $self->follow_link( %{$parms} );
 
     my $ok;
     my $error;
@@ -637,7 +637,8 @@ Follow all links on the current page and test for HTTP status 200
 sub page_links_ok {
     my $self = shift;
     my $desc = shift;
-    $desc = "All links ok" if !defined($desc);
+
+    $desc = 'All links ok' unless defined $desc;
 
     my @links = $self->followable_links();
     my @urls = _format_links(\@links);
@@ -664,12 +665,13 @@ sub page_links_content_like {
     my $self = shift;
     my $regex = shift;
     my $desc = shift;
-    $desc = "All links are like '$regex'" if !defined($desc);
+
+    $desc = qq{All links are like "$regex"} unless defined $desc;
 
     my $usable_regex=$Test->maybe_regex( $regex );
     unless(defined( $usable_regex )) {
         my $ok = $Test->ok( 0, 'page_links_content_like' );
-        $Test->diag("     '$regex' doesn't look much like a regex to me.");
+        $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
     }
 
@@ -704,7 +706,7 @@ sub page_links_content_unlike {
     my $usable_regex=$Test->maybe_regex( $regex );
     unless(defined( $usable_regex )) {
         my $ok = $Test->ok( 0, 'page_links_content_unlike' );
-        $Test->diag("     '$regex' doesn't look much like a regex to me.");
+        $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
     }
 
@@ -743,7 +745,7 @@ sub links_ok {
     my $desc = shift;
 
     my @urls = _format_links( $links );
-    $desc = _default_links_desc(\@urls, "are ok") if !defined($desc);
+    $desc = _default_links_desc(\@urls, 'are ok') unless defined $desc;
     my @failures = $self->_check_links_status( \@urls );
     my $ok = (@failures == 0);
 
@@ -836,7 +838,7 @@ sub link_content_like {
     my $usable_regex=$Test->maybe_regex( $regex );
     unless(defined( $usable_regex )) {
         my $ok = $Test->ok( 0, 'link_content_like' );
-        $Test->diag("     '$regex' doesn't look much like a regex to me.");
+        $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
     }
 
@@ -873,12 +875,12 @@ sub link_content_unlike {
     my $usable_regex=$Test->maybe_regex( $regex );
     unless(defined( $usable_regex )) {
         my $ok = $Test->ok( 0, 'link_content_unlike' );
-        $Test->diag("     '$regex' doesn't look much like a regex to me.");
+        $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
     }
 
     my @urls = _format_links( $links );
-    $desc = _default_links_desc(\@urls, "are not like '$regex'") if !defined($desc);
+    $desc = _default_links_desc(\@urls, qq{are not like "$regex"}) if !defined($desc);
     my @failures = $self->_check_links_content( \@urls, $regex, 'unlike' );
     my $ok = (@failures == 0);
 
@@ -962,13 +964,13 @@ sub _format_links {
     my $links = shift;
 
     my @urls;
-    if(ref($links) eq 'ARRAY') {
-        if(defined($$links[0])) {
-            if(ref($$links[0]) eq 'WWW::Mechanize::Link') {
-                @urls=map { $_->url() } @$links;
+    if (ref($links) eq 'ARRAY') {
+        if (defined($$links[0])) {
+            if (ref($$links[0]) eq 'WWW::Mechanize::Link') {
+                @urls = map { $_->url() } @{$links};
             }
             else {
-                @urls=@$links;
+                @urls = @{$links};
             }
         }
     }
@@ -1038,7 +1040,7 @@ sub stuff_inputs {
 
     my $options = shift || {};
     assert_isa( $options, 'HASH' );
-    assert_in( $_, ['ignore', 'fill', 'specs'] ) foreach ( keys %$options );
+    assert_in( $_, ['ignore', 'fill', 'specs'] ) foreach ( keys %{$options} );
 
     # set up the fill we'll use unless a field overrides it
     my $default_fill = '@';
@@ -1057,13 +1059,13 @@ sub stuff_inputs {
     if ( exists $options->{specs} ) {
         assert_isa( $options->{specs}, 'HASH' );
         $specs = $options->{specs};
-        foreach my $field_name ( keys %$specs ) {
+        foreach my $field_name ( keys %{$specs} ) {
             assert_isa( $specs->{$field_name}, 'HASH' );
             assert_in( $_, ['fill', 'maxlength'] ) foreach ( keys %{$specs->{$field_name}} );
         }
     }
 
-    my @inputs = $self->find_all_inputs( type => qr/^(text|textarea|password)$/ );
+    my @inputs = $self->find_all_inputs( type_regex => qr/^(text|textarea|password)$/ );
 
     foreach my $field ( @inputs ) {
         next if $field->readonly();
