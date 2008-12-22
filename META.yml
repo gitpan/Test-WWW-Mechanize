@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Test-WWW-Mechanize
-version:             1.22
+version:             1.23_01
 abstract:            Testing-specific WWW::Mechanize subclass
 license:             ~
 author:              
@@ -9,7 +9,7 @@ generated_by:        ExtUtils::MakeMaker version 6.44
 distribution_type:   module
 requires:     
     Carp::Assert::More:            0
-    HTTP::Server::Simple:          0.07
+    HTTP::Server::Simple:          0.35
     HTTP::Server::Simple::CGI:     0
     Test::Builder::Tester:         1.09
     Test::LongString:              0.07
