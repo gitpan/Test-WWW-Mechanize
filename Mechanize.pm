@@ -9,11 +9,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.24
+Version 1.26
 
 =cut
 
-our $VERSION = '1.24';
+our $VERSION = '1.26';
 
 =head1 SYNOPSIS
 
@@ -156,37 +156,11 @@ A default description of "GET $url" is used if none if provided.
 
 sub get_ok {
     my $self = shift;
-    my $url = shift;
 
-    my $desc;
-    my %opts;
-
-    if ( @_ ) {
-        my $flex = shift; # The flexible argument
-
-        if ( !defined( $flex ) ) {
-            $desc = shift;
-        }
-        elsif ( ref $flex eq 'HASH' ) {
-            %opts = %{$flex};
-            $desc = shift;
-        }
-        elsif ( ref $flex eq 'ARRAY' ) {
-            %opts = @{$flex};
-            $desc = shift;
-        }
-        else {
-            $desc = $flex;
-        }
-    } # parms left
+    my ($url,$desc,%opts) = $self->_unpack_args( 'GET', @_ );
 
     $self->get( $url, %opts );
     my $ok = $self->success;
-
-    if ( not defined $desc ) {
-        $url = $url->url if ref($url) eq 'WWW::Mechanize::Link';
-        $desc = "GET $url";
-    }
 
     $ok = $self->_maybe_lint( $ok, $desc );
 
@@ -230,37 +204,12 @@ A default description of "HEAD $url" is used if none if provided.
 
 sub head_ok {
     my $self = shift;
-    my $url = shift;
 
-    my $desc;
-    my %opts;
-
-    if ( @_ ) {
-        my $flex = shift; # The flexible argument
-
-        if ( !defined( $flex ) ) {
-            $desc = shift;
-        }
-        elsif ( ref $flex eq 'HASH' ) {
-            %opts = %{$flex};
-            $desc = shift;
-        }
-       elsif ( ref $flex eq 'ARRAY' ) {
-            %opts = @{$flex};
-            $desc = shift;
-        }
-        else {
-            $desc = $flex;
-        }
-    } # parms left
+    my ($url,$desc,%opts) = $self->_unpack_args( 'HEAD', @_ );
 
     $self->head( $url, %opts );
     my $ok = $self->success;
 
-    if ( not defined $desc ) {
-        $url = $url->url if ref($url) eq 'WWW::Mechanize::Link';
-        $desc = "HEAD $url";
-    }
     $Test->ok( $ok, $desc );
     if ( !$ok ) {
         $Test->diag( $self->status );
@@ -269,6 +218,7 @@ sub head_ok {
 
     return $ok;
 }
+
 
 =head2 $mech->post_ok( $url, [ \%LWP_options ,] $desc )
 
@@ -283,34 +233,9 @@ A default description of "POST to $url" is used if none if provided.
 
 sub post_ok {
     my $self = shift;
-    my $url = shift;
 
-    my $desc;
-    my %opts;
+    my ($url,$desc,%opts) = $self->_unpack_args( 'POST', @_ );
 
-    if ( @_ ) {
-        my $flex = shift; # The flexible argument
-
-        if ( !defined( $flex ) ) {
-            $desc = shift;
-        }
-        elsif ( ref $flex eq 'HASH' ) {
-            %opts = %{$flex};
-            $desc = shift;
-        }
-        elsif ( ref $flex eq 'ARRAY' ) {
-            %opts = @{$flex};
-            $desc = shift;
-        }
-        else {
-            $desc = $flex;
-        }
-    } # parms left
-
-    if ( not defined $desc ) {
-        $url = $url->url if ref($url) eq 'WWW::Mechanize::Link';
-        $desc = "POST $url";
-    }
     $self->post( $url, \%opts );
     my $ok = $self->success;
     $Test->ok( $ok, $desc );
@@ -335,35 +260,10 @@ A default description of "PUT to $url" is used if none if provided.
 
 sub put_ok {
     my $self = shift;
-    my $url = shift;
 
-    my $desc;
-    my %opts;
-
-    if ( @_ ) {
-        my $flex = shift; # The flexible argument
-
-        if ( !defined( $flex ) ) {
-            $desc = shift;
-        }
-        elsif ( ref $flex eq 'HASH' ) {
-            %opts = %{$flex};
-            $desc = shift;
-        }
-        elsif ( ref $flex eq 'ARRAY' ) {
-            %opts = @{$flex};
-            $desc = shift;
-        }
-        else {
-            $desc = $flex;
-        }
-    } # parms left
-
-    if ( not defined $desc ) {
-        $url = $url->url if ref($url) eq 'WWW::Mechanize::Link';
-        $desc = "PUT $url";
-    }
+    my ($url,$desc,%opts) = $self->_unpack_args( 'PUT', @_ );
     $self->put( $url, \%opts );
+
     my $ok = $self->success;
     $Test->ok( $ok, $desc );
     if ( !$ok ) {
@@ -511,6 +411,44 @@ sub click_ok {
     }
     return $Test->ok( 1, $desc );
 }
+
+
+sub _unpack_args {
+    my $self   = shift;
+    my $method = shift;
+    my $url    = shift;
+
+    my $desc;
+    my %opts;
+
+    if ( @_ ) {
+        my $flex = shift; # The flexible argument
+
+        if ( !defined( $flex ) ) {
+            $desc = shift;
+        }
+        elsif ( ref $flex eq 'HASH' ) {
+            %opts = %{$flex};
+            $desc = shift;
+        }
+        elsif ( ref $flex eq 'ARRAY' ) {
+            %opts = @{$flex};
+            $desc = shift;
+        }
+        else {
+            $desc = $flex;
+        }
+    } # parms left
+
+    if ( not defined $desc ) {
+        $url = $url->url if ref($url) eq 'WWW::Mechanize::Link';
+        $desc = "$method $url";
+    }
+
+    return ($url, $desc, %opts);
+}
+
+
 
 =head1 METHODS: CONTENT CHECKING
 
@@ -766,7 +704,7 @@ sub content_unlike {
     my $self = shift;
     my $regex = shift;
     my $desc = shift;
-    $desc = qq{Content is like "$regex"} if !defined($desc);
+    $desc = qq{Content is unlike "$regex"} if !defined($desc);
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
     return unlike_string( $self->content, $regex, $desc );
@@ -1392,10 +1330,20 @@ and Pete Krawczyk for patches.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2004-2008 Andy Lester, all rights reserved.
+Copyright 2004-2009 Andy Lester.
 
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+This program is free software; you can redistribute it and/or
+modify it under the terms of either:
+
+=over 4
+
+=item * the GNU General Public License as published by the Free
+Software Foundation; either version 1, or (at your option) any
+later version, or
+
+=item * the Artistic License version 2.0.
+
+=back
 
 =cut
 

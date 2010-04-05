@@ -4,6 +4,25 @@ WWW::Mechanize and Test::WWW::Mechanize do not use rt.cpan.org for
 bug tracking.  They are now being tracked via Google Code at
 http://code.google.com/p/www-mechanize/issues/list
 
+NEXT
+1.26    Mon Apr  5 00:54:46 CDT 2010
+------------------------------------
+[FIXED]
+Description of error in $mech->content_unlike() was wrong.
+
+Now requires Test::LongString 0.12.
+
+t/put_ok.t now passes, but with a handful of warnings.  Help in figuring
+out why would be appreciated.
+
+[INTERNALS]
+Hoisted common code out of get_ok, post_ok, etc.
+
+[DOCUMENTATION]
+Updated copyright and licensing information.
+
+
+
 1.24    Sat Jan 17 13:26:47 CST 2009
 ------------------------------------
 Tests run on port 13432 instead of 8080.  It should really be a
@@ -95,7 +114,6 @@ $^S to find out if the __DIE__ signal is being called
 for an eval so we ignore that case with the patch
 attached.
 
-The stuff_inputs() function now actually works.
 
 [DOCUMENTATION]
 *   Made the synopsis show that T:W:M doesn't take the tests=>$x
