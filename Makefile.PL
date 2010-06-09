@@ -10,6 +10,7 @@ my $parms = {
     PL_FILES            => {},
     PREREQ_PM => {
         'Carp::Assert::More'        => 0,
+        'HTML::TreeBuilder'         => 0,
         'HTTP::Server::Simple'      => '0.42',
         'HTTP::Server::Simple::CGI' => 0,
         'Test::Builder::Tester'     => '1.09',
@@ -22,7 +23,7 @@ my $parms = {
     clean               => { FILES => 'Test-WWW-Mechanize-*' },
 };
 
-if ( $ExtUtils::MakeMaker::VERSION ge '6.45_01' ) {
+if ( $ExtUtils::MakeMaker::VERSION ge '6.46' ) {
     $parms->{META_MERGE} = {
         resources => {
             license     => 'http://dev.perl.org/licenses/',
@@ -34,7 +35,7 @@ if ( $ExtUtils::MakeMaker::VERSION ge '6.45_01' ) {
     };
     $parms->{LICENSE} = 'perl';
 }
-if ( $ExtUtils::MakeMaker::VERSION ge '6.47_02' ) {
+if ( $ExtUtils::MakeMaker::VERSION ge '6.48' ) {
     $parms->{MIN_PERL_VERSION} = 5.008;
 }
 

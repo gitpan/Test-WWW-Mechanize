@@ -9,11 +9,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.28
+Version 1.30
 
 =cut
 
-our $VERSION = '1.28';
+our $VERSION = '1.30';
 
 =head1 SYNOPSIS
 
@@ -26,8 +26,8 @@ features for web application testing.  For example:
     my $mech = Test::WWW::Mechanize->new;
     $mech->get_ok( $page );
     $mech->base_is( 'http://petdance.com/', 'Proper <BASE HREF>' );
-    $mech->title_is( "Invoice Status", "Make sure we're on the invoice page" );
-    $mech->content_contains( "Andy Lester", "My name somewhere" );
+    $mech->title_is( 'Invoice Status', "Make sure we're on the invoice page" );
+    $mech->text_contains( 'Andy Lester', 'My name somewhere' );
     $mech->content_like( qr/(cpan|perl)\.org/, "Link to perl.org or CPAN" );
 
 This is equivalent to:
@@ -40,7 +40,7 @@ This is equivalent to:
     ok( $mech->success );
     is( $mech->base, 'http://petdance.com', 'Proper <BASE HREF>' );
     is( $mech->title, "Invoice Status", "Make sure we're on the invoice page" );
-    ok( index( $mech->content, "Andy Lester" ) >= 0, "My name somewhere" );
+    ok( index( $mech->content( format => 'text' ), 'Andy Lester' ) >= 0, 'My name somewhere' );
     like( $mech->content, qr/(cpan|perl)\.org/, "Link to perl.org or CPAN" );
 
 but has nicer diagnostics if they fail.
@@ -59,7 +59,7 @@ results in
     ok - Got 'http://petdance.com/' ok
     ok - Base is 'http://petdance.com/'
     ok - Title is 'Invoice Status'
-    ok - Content contains 'Andy Lester'
+    ok - Text contains 'Andy Lester'
     ok - Content is like '(?-xism:(cpan|perl)\.org)'
 
 =cut
@@ -90,15 +90,7 @@ called.
 
 =item * get_ok()
 
-=back
-
-and will eventually do the same after any of the following:
-
-=over
-
 =item * post_ok()
-
-=item * back_ok()
 
 =item * submit_form_ok()
 
@@ -238,11 +230,7 @@ sub post_ok {
 
     $self->post( $url, \%opts );
     my $ok = $self->success;
-    $Test->ok( $ok, $desc );
-    if ( !$ok ) {
-        $Test->diag( $self->status );
-        $Test->diag( $self->response->message ) if $self->response;
-    }
+    $ok = $self->_maybe_lint( $ok, $desc );
 
     return $ok;
 }
@@ -322,8 +310,7 @@ sub submit_form_ok {
         }
     }
 
-    $Test->ok( $ok, $desc );
-    $Test->diag( $error ) if $error;
+    $ok = $self->_maybe_lint( $ok, $desc );
 
     return $ok;
 }
@@ -381,8 +368,7 @@ sub follow_link_ok {
         }
     }
 
-    $Test->ok( $ok, $desc );
-    $Test->diag( $error ) if $error;
+    $ok = $self->_maybe_lint( $ok, $desc );
 
     return $ok;
 }
@@ -405,12 +391,12 @@ sub click_ok {
         return $Test->ok( 0, $desc );
     }
 
-    if ( !$response->is_success ) {
-        $Test->diag( "Failed test $desc:" );
-        $Test->diag( $response->as_string );
-        return $Test->ok( 0, $desc );
-    }
-    return $Test->ok( 1, $desc );
+
+    my $ok = $response->is_success;
+
+    $ok = $self->_maybe_lint( $ok, $desc );
+
+    return $ok;
 }
 
 
@@ -702,13 +688,78 @@ Tells if the content of the page does NOT match I<$regex>.
 =cut
 
 sub content_unlike {
-    my $self = shift;
+    my $self  = shift;
     my $regex = shift;
-    my $desc = shift;
-    $desc = qq{Content is unlike "$regex"} if !defined($desc);
+    my $desc  = shift || qq{Content is unlike "$regex"};
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
     return unlike_string( $self->content, $regex, $desc );
+}
+
+=head2 $mech->text_contains( $str [, $desc ] )
+
+Tells if the text form of the page's content contains I<$str>.
+
+When your page contains HTML which is difficult, unimportant, or
+unlikely to match over time as designers alter markup, use
+C<text_contains> instead of L</content_contains>.
+
+ # <b>Hi, <i><a href="some/path">User</a></i>!</b>
+ $mech->content_contains('Hi, User'); # Fails.
+ $mech->text_contains('Hi, User'); # Passes.
+
+Text is determined by calling C<< $mech->content(format => 'text') >>.
+See L<WWW::Mechanize/content>.
+
+=cut
+
+sub text_contains {
+    my $self = shift;
+    my $str  = shift;
+    my $desc = shift || qq{Text contains "$str"};
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    if ( ref($str) eq 'REGEX' ) {
+        diag( 'text_contains takes a string, not a regex' );
+    }
+
+    return contains_string( $self->content(format => "text"), $str, $desc );
+}
+
+=head2 $mech->text_like( $regex [, $desc ] )
+
+Tells if the text form of the page's content matches I<$regex>.
+
+=cut
+
+sub text_like {
+    my $self  = shift;
+    my $regex = shift;
+    my $desc  = shift || qq{Text is like "$regex"};
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return like_string( $self->_text, $regex, $desc );
+}
+
+=head2 $mech->text_unlike( $regex [, $desc ] )
+
+Tells if the text format of the page's content does NOT match I<$regex>.
+
+=cut
+
+sub text_unlike {
+    my $self  = shift;
+    my $regex = shift;
+    my $desc  = shift || qq{Text is unlike "$regex"};
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    return unlike_string( $self->_text, $regex, $desc );
+}
+
+sub _text {
+    my $self = shift;
+
+    return $self->content( format => 'text' );
 }
 
 =head2 $mech->has_tag( $tag, $text [, $desc ] )
@@ -721,8 +772,7 @@ sub has_tag {
     my $self = shift;
     my $tag  = shift;
     my $text = shift;
-    my $desc = shift;
-    $desc = qq{Page has $tag tag with "$text"} if !defined($desc);
+    my $desc = shift || qq{Page has $tag tag with "$text"};
 
     my $found = $self->_tag_walk( $tag, sub { $text eq $_[0] } );
 
@@ -1319,6 +1369,7 @@ L<http://search.cpan.org/dist/Test-WWW-Mechanize>
 =head1 ACKNOWLEDGEMENTS
 
 Thanks to
+Philip G. Potter,
 Niko Tyni,
 Greg Sheard,
 Michael Schwern,
