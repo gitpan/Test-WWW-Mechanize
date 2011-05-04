@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Test-WWW-Mechanize
-version:            1.30
+version:            1.31_01
 abstract:           Testing-specific WWW::Mechanize subclass
 author:
     - Andy Lester <andy@petdance.com>
@@ -15,12 +15,13 @@ requires:
     HTML::TreeBuilder:    0
     HTTP::Server::Simple:  0.42
     HTTP::Server::Simple::CGI:  0
+    LWP:                  6.02
     perl:                 5.008
     Test::Builder::Tester:  1.09
-    Test::LongString:     0.12
+    Test::LongString:     0.15
     Test::More:           0
     URI::file:            0
-    WWW::Mechanize:       1.24
+    WWW::Mechanize:       1.68
 resources:
     bugtracker:   http://code.google.com/p/www-mechanize/issues/list
     homepage:     http://code.google.com/p/www-mechanize/

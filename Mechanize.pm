@@ -9,11 +9,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.30
+Version 1.31_01
 
 =cut
 
-our $VERSION = '1.30';
+our $VERSION = '1.31_01';
 
 =head1 SYNOPSIS
 
@@ -28,7 +28,7 @@ features for web application testing.  For example:
     $mech->base_is( 'http://petdance.com/', 'Proper <BASE HREF>' );
     $mech->title_is( 'Invoice Status', "Make sure we're on the invoice page" );
     $mech->text_contains( 'Andy Lester', 'My name somewhere' );
-    $mech->content_like( qr/(cpan|perl)\.org/, "Link to perl.org or CPAN" );
+    $mech->content_like( qr/(cpan|perl)\.org/, 'Link to perl.org or CPAN' );
 
 This is equivalent to:
 
@@ -39,9 +39,9 @@ This is equivalent to:
     $mech->get( $page );
     ok( $mech->success );
     is( $mech->base, 'http://petdance.com', 'Proper <BASE HREF>' );
-    is( $mech->title, "Invoice Status", "Make sure we're on the invoice page" );
+    is( $mech->title, 'Invoice Status', "Make sure we're on the invoice page" );
     ok( index( $mech->content( format => 'text' ), 'Andy Lester' ) >= 0, 'My name somewhere' );
-    like( $mech->content, qr/(cpan|perl)\.org/, "Link to perl.org or CPAN" );
+    like( $mech->content, qr/(cpan|perl)\.org/, 'Link to perl.org or CPAN' );
 
 but has nicer diagnostics if they fail.
 
@@ -50,8 +50,8 @@ Default descriptions will be supplied for most methods if you omit them. e.g.
     my $mech = Test::WWW::Mechanize->new;
     $mech->get_ok( 'http://petdance.com/' );
     $mech->base_is( 'http://petdance.com/' );
-    $mech->title_is( "Invoice Status" );
-    $mech->content_contains( "Andy Lester" );
+    $mech->title_is( 'Invoice Status' );
+    $mech->content_contains( 'Andy Lester' );
     $mech->content_like( qr/(cpan|perl)\.org/ );
 
 results in
@@ -100,7 +100,7 @@ called.
 
 =back
 
-This means you no longerhave to do the following:
+This means you no longer have to do the following:
 
     my $mech = Test::WWW::Mechanize->new();
     $mech->get_ok( $url, 'Fetch the intro page' );
@@ -273,7 +273,13 @@ I<%parms> is a hashref containing the parms to pass to C<submit_form()>.
 Note that the parms to C<submit_form()> are a hash whereas the parms to
 this function are a hashref.  You have to call this function like:
 
-    $agent->submit_form_ok( {n=>3}, "looking for 3rd link" );
+    $mech->submit_form_ok( {
+            form_number => 3,
+            fields      => {
+                answer => 42
+            },
+        }, 'now we just need the question'
+    );
 
 As with other test functions, C<$desc> is optional.  If it is supplied
 then it will display when running the test harness in verbose mode.
@@ -326,7 +332,7 @@ I<%parms> is a hashref containing the parms to pass to C<follow_link()>.
 Note that the parms to C<follow_link()> are a hash whereas the parms to
 this function are a hashref.  You have to call this function like:
 
-    $mech->follow_link_ok( {n=>3}, "looking for 3rd link" );
+    $mech->follow_link_ok( {n=>3}, 'looking for 3rd link' );
 
 As with other test functions, C<$desc> is optional.  If it is supplied
 then it will display when running the test harness in verbose mode.
@@ -504,7 +510,7 @@ sub _lint_content_ok {
 
 Tells if the title of the page is the given string.
 
-    $mech->title_is( "Invoice Summary" );
+    $mech->title_is( 'Invoice Summary' );
 
 =cut
 
@@ -558,7 +564,7 @@ sub title_unlike {
 
 Tells if the base of the page is the given string.
 
-    $mech->base_is( "http://example.com/" );
+    $mech->base_is( 'http://example.com/' );
 
 =cut
 
@@ -738,7 +744,7 @@ sub text_like {
     my $desc  = shift || qq{Text is like "$regex"};
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
-    return like_string( $self->_text, $regex, $desc );
+    return like_string( $self->text, $regex, $desc );
 }
 
 =head2 $mech->text_unlike( $regex [, $desc ] )
@@ -753,13 +759,7 @@ sub text_unlike {
     my $desc  = shift || qq{Text is unlike "$regex"};
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
-    return unlike_string( $self->_text, $regex, $desc );
-}
-
-sub _text {
-    my $self = shift;
-
-    return $self->content( format => 'text' );
+    return unlike_string( $self->text, $regex, $desc );
 }
 
 =head2 $mech->has_tag( $tag, $text [, $desc ] )
@@ -1043,7 +1043,7 @@ sub link_content_like {
     }
 
     my @urls = _format_links( $links );
-    $desc = _default_links_desc(\@urls, "are like '$regex'") if !defined($desc);
+    $desc = _default_links_desc( \@urls, qq{are like "$regex"} ) if !defined($desc);
     my @failures = $self->_check_links_content( \@urls, $regex );
     my $ok = (@failures == 0);
 
@@ -1080,7 +1080,7 @@ sub link_content_unlike {
     }
 
     my @urls = _format_links( $links );
-    $desc = _default_links_desc(\@urls, qq{are not like "$regex"}) if !defined($desc);
+    $desc = _default_links_desc( \@urls, qq{are not like "$regex"} ) if !defined($desc);
     my @failures = $self->_check_links_content( \@urls, $regex, 'unlike' );
     my $ok = (@failures == 0);
 
@@ -1383,7 +1383,7 @@ and Pete Krawczyk for patches.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2004-2010 Andy Lester.
+Copyright 2004-2011 Andy Lester.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of either:
