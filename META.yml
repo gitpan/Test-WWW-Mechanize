@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Test-WWW-Mechanize
-version:            1.31_01
+version:            1.32
 abstract:           Testing-specific WWW::Mechanize subclass
 author:
     - Andy Lester <andy@petdance.com>
@@ -24,10 +24,10 @@ requires:
     WWW::Mechanize:       1.68
 resources:
     bugtracker:   http://code.google.com/p/www-mechanize/issues/list
-    homepage:     http://code.google.com/p/www-mechanize/
-    license:      http://dev.perl.org/licenses/
+    homepage:     https://github.com/petdance/test-www-mechanize
+    license:      http://www.opensource.org/licenses/artistic-license-2.0
     MailingList:  http://groups.google.com/group/www-mechanize-users
-    Repository:   http://code.google.com/p/www-mechanize/source
+    Repository:   https://github.com/petdance/test-www-mechanize
 no_index:
     directory:
         - t
