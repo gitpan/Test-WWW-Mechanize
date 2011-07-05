@@ -9,11 +9,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.32
+Version 1.34
 
 =cut
 
-our $VERSION = '1.32';
+our $VERSION = '1.34';
 
 =head1 SYNOPSIS
 
@@ -643,8 +643,9 @@ sub content_contains {
     my $desc = shift;
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
-    if ( ref($str) eq 'REGEX' ) {
-        diag( 'content_contains takes a string, not a regex' );
+
+    if ( ref($str) ) {
+        return $Test->ok( 0, 'Test::WWW::Mechanize->content_contains called incorrectly.  It requires a scalar, not a reference.' );
     }
     $desc = qq{Content contains "$str"} if !defined($desc);
 
@@ -663,8 +664,8 @@ sub content_lacks {
     my $desc = shift;
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
-    if ( ref($str) eq 'REGEX' ) {
-        diag( 'content_lacks takes a string, not a regex' );
+    if ( ref($str) ) {
+        return $Test->ok( 0, 'Test::WWW::Mechanize->content_lacks called incorrectly.  It requires a scalar, not a reference.' );
     }
     $desc = qq{Content lacks "$str"} if !defined($desc);
 
@@ -714,7 +715,7 @@ C<text_contains> instead of L</content_contains>.
  $mech->content_contains('Hi, User'); # Fails.
  $mech->text_contains('Hi, User'); # Passes.
 
-Text is determined by calling C<< $mech->content(format => 'text') >>.
+Text is determined by calling C<< $mech->text() >>.
 See L<WWW::Mechanize/content>.
 
 =cut
@@ -725,11 +726,31 @@ sub text_contains {
     my $desc = shift || qq{Text contains "$str"};
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
-    if ( ref($str) eq 'REGEX' ) {
-        diag( 'text_contains takes a string, not a regex' );
+    if ( ref($str) ) {
+        return $Test->ok( 0, 'Test::WWW::Mechanize->text_contains called incorrectly.  It requires a scalar, not a reference.' );
     }
 
-    return contains_string( $self->content(format => "text"), $str, $desc );
+    return contains_string( $self->text, $str, $desc );
+}
+
+=head2 $mech->text_lacks( $str [, $desc ] )
+
+Tells if the text of the page lacks I<$str>.
+
+=cut
+
+sub text_lacks {
+    my $self = shift;
+    my $str = shift;
+    my $desc = shift;
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+    if ( ref($str) ) {
+        return $Test->ok( 0, 'Test::WWW::Mechanize->text_lacks called incorrectly.  It requires a scalar, not a reference.' );
+    }
+    $desc = qq{Text lacks "$str"} if !defined($desc);
+
+    return lacks_string( $self->text, $str, $desc );
 }
 
 =head2 $mech->text_like( $regex [, $desc ] )
@@ -823,7 +844,7 @@ https links.
 sub followable_links {
     my $self = shift;
 
-    return $self->find_all_links( url_abs_regex => qr{^https?://} );
+    return $self->find_all_links( url_abs_regex => qr{^(?:https?|file)://} );
 }
 
 =head2 $mech->page_links_ok( [ $desc ] )
@@ -869,7 +890,8 @@ sub page_links_content_like {
     $desc = qq{All links are like "$regex"} unless defined $desc;
 
     my $usable_regex=$Test->maybe_regex( $regex );
-    unless(defined( $usable_regex )) {
+
+    if ( !defined( $usable_regex ) ) {
         my $ok = $Test->ok( 0, 'page_links_content_like' );
         $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
@@ -901,10 +923,11 @@ sub page_links_content_unlike {
     my $self = shift;
     my $regex = shift;
     my $desc = shift;
-    $desc = "All links are unlike '$regex'" if !defined($desc);
+    $desc = qq{All links are unlike "$regex"} unless defined($desc);
 
     my $usable_regex=$Test->maybe_regex( $regex );
-    unless(defined( $usable_regex )) {
+
+    if ( !defined( $usable_regex ) ) {
         my $ok = $Test->ok( 0, 'page_links_content_unlike' );
         $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
@@ -1036,7 +1059,8 @@ sub link_content_like {
     my $desc = shift;
 
     my $usable_regex=$Test->maybe_regex( $regex );
-    unless(defined( $usable_regex )) {
+
+    if ( !defined( $usable_regex ) ) {
         my $ok = $Test->ok( 0, 'link_content_like' );
         $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
@@ -1073,7 +1097,8 @@ sub link_content_unlike {
     my $desc = shift;
 
     my $usable_regex=$Test->maybe_regex( $regex );
-    unless(defined( $usable_regex )) {
+
+    if ( !defined( $usable_regex ) ) {
         my $ok = $Test->ok( 0, 'link_content_unlike' );
         $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
@@ -1165,8 +1190,9 @@ sub _format_links {
 
     my @urls;
     if (ref($links) eq 'ARRAY') {
-        if (defined($$links[0])) {
-            if (ref($$links[0]) eq 'WWW::Mechanize::Link') {
+        my $link = $links->[0];
+        if ( defined($link) ) {
+            if ( ref($link) eq 'WWW::Mechanize::Link' ) {
                 @urls = map { $_->url() } @{$links};
             }
             else {
@@ -1317,6 +1343,145 @@ sub stuff_inputs {
     return;
 }
 
+
+
+=head2 $mech->lacks_uncapped_inputs( [$comment] )
+
+Executes a test to make sure that the current form content has no
+text input fields that lack the C<maxlength> attribute, and that each
+C<maxlength> value is a positive integer.  The test fails if the current
+form has such a field, and succeeds otherwise.
+
+Returns an array containing all text input fields in the current
+form that do not specify a maximum input length.  Fields for which
+the concept of input length is irrelevant, and controls that HTML
+does not allow to be capped (e.g. textarea) are ignored.
+
+The inputs in the returned array are descended from HTML::Form::Input.
+
+The return is true if the test succeeded, false otherwise.
+
+=cut
+
+sub lacks_uncapped_inputs {
+    my $self    = shift;
+    my $comment = shift;
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+
+    my @uncapped;
+
+    my @inputs = $self->grep_inputs( { type => qr/^(?:text|password)$/ } );
+    foreach my $field ( @inputs ) {
+        next if $field->readonly();
+        next if $field->disabled();
+
+        if ( not defined($field->{maxlength}) ) {
+            push( @uncapped, $field->name . ' has no maxlength attribute' );
+            next;
+        }
+
+        my $val = $field->{maxlength};
+        if ( ($val !~ /^\s*\d+\s*$/) || ($val+0 <= 0) ) {
+            push( @uncapped, $field->name . qq{ has an invalid maxlength attribute of "$val"} );
+        }
+    }
+
+    my $ok = $Test->cmp_ok( scalar @uncapped, '==', 0, $comment );
+    $Test->diag( $_ ) for @uncapped;
+
+    return $ok;
+}
+
+=head2 $mech->grep_inputs( \%properties )
+
+grep_inputs() returns an array of all the input controls in the
+current form whose properties match all of the regexes in $properties.
+The controls returned are all descended from HTML::Form::Input.
+
+If $properties is undef or empty then all inputs will be
+returned.
+
+If there is no current page, there is no form on the current
+page, or there are no submit controls in the current form
+then the return will be an empty array.
+
+    # get all text controls whose names begin with "customer"
+    my @customer_text_inputs =
+        $mech->grep_inputs( {
+            type => qr/^(text|textarea)$/,
+            name => qr/^customer/
+        }
+    );
+
+=cut
+
+sub grep_inputs {
+    my $self = shift;
+    my $properties = shift;
+
+    my @found;
+
+    my $form = $self->current_form();
+    if ( $form ) {
+        my @inputs = $form->inputs();
+        @found = _grep_hashes( \@inputs, $properties );
+    }
+
+    return @found;
+}
+
+
+=head2 $mech->grep_submits( \%properties )
+
+grep_submits() does the same thing as grep_inputs() except that
+it only returns controls that are submit controls, ignoring
+other types of input controls like text and checkboxes.
+
+=cut
+
+sub grep_submits {
+    my $self = shift;
+    my $properties = shift || {};
+
+    $properties->{type} = qr/^(?:submit|image)$/;  # submits only
+    my @found = $self->grep_inputs( $properties );
+
+    return @found;
+}
+
+# search an array of hashrefs, returning an array of the incoming
+# hashrefs that match *all* the pattern in $patterns.
+sub _grep_hashes {
+    my $hashes = shift;
+    my $patterns = shift || {};
+
+    my @found;
+
+    if ( ! %{$patterns} ) {
+        # nothing to match on, so return them all
+        @found = @{$hashes};
+    }
+    else {
+        foreach my $hash ( @{$hashes} ) {
+
+            # check every pattern for a match on the current hash
+            my $matches_everything = 1;
+            foreach my $pattern_key ( keys %{$patterns} ) {
+                $matches_everything = 0 unless exists $hash->{$pattern_key} && $hash->{$pattern_key} =~ $patterns->{$pattern_key};
+                last if !$matches_everything;
+            }
+
+            push @found, $hash if $matches_everything;
+        }
+    }
+
+    return @found;
+}
+
+
+
+
 =head1 TODO
 
 Add HTML::Tidy capabilities.
@@ -1344,7 +1509,7 @@ You can also look for information at:
 
 =over 4
 
-=item * Google Code bug tracker
+=item * Bug tracker
 
 L<http://code.google.com/p/www-mechanize/issues/list>
 
@@ -1385,18 +1550,8 @@ and Pete Krawczyk for patches.
 
 Copyright 2004-2011 Andy Lester.
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of either:
-
-=over 4
-
-=item * the GNU General Public License as published by the Free
-Software Foundation; either version 1, or (at your option) any
-later version, or
-
-=item * the Artistic License version 2.0.
-
-=back
+This program is free software; you can redistribute it and/or modify it
+under the terms of the Artistic License version 2.0.
 
 =cut
 

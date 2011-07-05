@@ -10,140 +10,136 @@ BEGIN {
     use_ok( 'Test::WWW::Mechanize' );
 }
 
-my $mech = Test::WWW::Mechanize->new();
-my $uri = URI::file->new_abs( 't/stuff_inputs.html' )->as_string;
+MAIN: {
+    my $mech = Test::WWW::Mechanize->new();
+    my $uri = URI::file->new_abs( 't/stuff_inputs.html' )->as_string;
 
-EMPTY_FIELDS: {
-    $mech->get( $uri );
-    ok( $mech->success, "Fetched $uri" ) or die q{Can't get test page};
+    EMPTY_FIELDS: {
+        $mech->get_ok( $uri ) or die;
 
-    add_test_fields( $mech );
-    $mech->stuff_inputs();
-    field_checks(
-        $mech, {
-            text0         => '',
-            text1         => '@',
-            text10        => '@' x 10,
-            text70k       => '@' x 70_000,
-            textunlimited => '@' x 66_000,
-            textarea      => '@' x 66_000,
-        },
-        'filling empty fields'
-    );
-}
-
-
-MULTICHAR_FILL: {
-    $mech->get( $uri );
-    ok( $mech->success, "Fetched $uri" ) or die q{Can't get test page};
-
-    add_test_fields( $mech );
-    $mech->stuff_inputs( { fill => '123' } );
-    field_checks(
-        $mech, {
-            text0         => '',
-            text1         => '1',
-            text10        => '1231231231',
-            text70k       => ('123' x 23_333) . '1',
-            textunlimited => '123' x 22_000,
-            textarea      => '123' x 22_000,
-        },
-        'multichar_fill'
-    );
-}
+        add_test_fields( $mech );
+        $mech->stuff_inputs();
+        field_checks(
+            $mech, {
+                text0         => '',
+                text1         => '@',
+                text10        => '@' x 10,
+                text70k       => '@' x 70_000,
+                textunlimited => '@' x 66_000,
+                textarea      => '@' x 66_000,
+            },
+            'filling empty fields'
+        );
+    }
 
 
-OVERWRITE: {
-    $mech->get( $uri );
-    ok( $mech->success, "Fetched $uri" ) or die q{Can't get test page};
+    MULTICHAR_FILL: {
+        $mech->get_ok( $uri ) or die;
 
-    add_test_fields( $mech );
-    $mech->stuff_inputs();
-    is( $mech->value('text10'), '@' x 10, 'overwriting fields: initial fill as expected' );
-    $mech->stuff_inputs( { fill => 'X' } );
-    field_checks(
-        $mech, {
-            text0         => '',
-            text1         => 'X',
-            text10        => 'X' x 10,
-            text70k       => 'X' x 70_000,
-            textunlimited => 'X' x 66_000,
-            textarea      => 'X' x 66_000,
-        },
-        'overwriting fields'
-    );
-}
+        add_test_fields( $mech );
+        $mech->stuff_inputs( { fill => '123' } );
+        field_checks(
+            $mech, {
+                text0         => '',
+                text1         => '1',
+                text10        => '1231231231',
+                text70k       => ('123' x 23_333) . '1',
+                textunlimited => '123' x 22_000,
+                textarea      => '123' x 22_000,
+            },
+            'multichar_fill'
+        );
+    }
 
 
-CUSTOM_FILL: {
-    $mech->get( $uri );
-    ok( $mech->success, "Fetched $uri" ) or die q{Can't get test page};
+    OVERWRITE: {
+        $mech->get_ok( $uri ) or die;
 
-    add_test_fields( $mech );
-    $mech->stuff_inputs( {
-            fill => 'z',
-            specs => {
-                text10 => { fill=>'#' },
-                textarea => { fill=>'*' },
+        add_test_fields( $mech );
+        $mech->stuff_inputs();
+        is( $mech->value('text10'), '@' x 10, 'overwriting fields: initial fill as expected' );
+        $mech->stuff_inputs( { fill => 'X' } );
+        field_checks(
+            $mech, {
+                text0         => '',
+                text1         => 'X',
+                text10        => 'X' x 10,
+                text70k       => 'X' x 70_000,
+                textunlimited => 'X' x 66_000,
+                textarea      => 'X' x 66_000,
+            },
+            'overwriting fields'
+        );
+    }
+
+
+    CUSTOM_FILL: {
+        $mech->get_ok( $uri ) or die;
+
+        add_test_fields( $mech );
+        $mech->stuff_inputs( {
+                fill => 'z',
+                specs => {
+                    text10 => { fill=>'#' },
+                    textarea => { fill=>'*' },
+                }
+            } );
+        field_checks(
+            $mech, {
+                text0         => '',
+                text1         => 'z',
+                text10        => '#' x 10,
+                text70k       => 'z' x 70_000,
+                textunlimited => 'z' x 66_000,
+                textarea      => '*' x 66_000,
+            },
+            'custom fill'
+        );
+    }
+
+
+    MAXLENGTH: {
+        $mech->get_ok( $uri ) or die;
+
+        add_test_fields( $mech );
+        $mech->stuff_inputs( {
+                specs => {
+                    text10 => { maxlength=>7 },
+                    textarea => { fill=>'*', maxlength=>9 },
+                }
             }
-    } );
-    field_checks(
-        $mech, {
-            text0         => '',
-            text1         => 'z',
-            text10        => '#' x 10,
-            text70k       => 'z' x 70_000,
-            textunlimited => 'z' x 66_000,
-            textarea      => '*' x 66_000,
-        },
-        'custom fill'
-    );
-}
+        );
+        field_checks(
+            $mech, {
+                text0         => '',
+                text1         => '@',
+                text10        => '@' x 7,
+                text70k       => '@' x 70_000,
+                textunlimited => '@' x 66_000,
+                textarea      => '*' x 9,
+            },
+            'maxlength'
+        );
+    }
 
 
-MAXLENGTH: {
-    $mech->get( $uri );
-    ok( $mech->success, "Fetched $uri" ) or die q{Can't get test page};
+    IGNORE: {
+        $mech->get_ok( $uri ) or die;
 
-    add_test_fields( $mech );
-    $mech->stuff_inputs( {
-            specs => {
-                text10 => { maxlength=>7 },
-                textarea => { fill=>'*', maxlength=>9 },
-            }
-        }
-    );
-    field_checks(
-        $mech, {
-            text0         => '',
-            text1         => '@',
-            text10        => '@' x 7,
-            text70k       => '@' x 70_000,
-            textunlimited => '@' x 66_000,
-            textarea      => '*' x 9,
-        },
-        'maxlength'
-    );
-}
-
-
-IGNORE: {
-    $mech->get( $uri );
-    ok( $mech->success, "Fetched $uri" ) or die q{Can't get test page};
-
-    add_test_fields( $mech );
-    $mech->stuff_inputs( { ignore => [ 'text10' ] } );
-    field_checks(
-        $mech, {
-            text0         => '',
-            text1         => '@',
-            text10        => undef,
-            text70k       => '@' x 70_000,
-            textunlimited => '@' x 66_000,
-            textarea      => '@' x 66_000,
-        },
-        'ignore'
-    );
+        add_test_fields( $mech );
+        $mech->stuff_inputs( { ignore => [ 'text10' ] } );
+        field_checks(
+            $mech, {
+                text0         => '',
+                text1         => '@',
+                text10        => undef,
+                text70k       => '@' x 70_000,
+                textunlimited => '@' x 66_000,
+                textarea      => '@' x 66_000,
+            },
+            'ignore'
+        );
+    }
 }
 
 
