@@ -6,7 +6,6 @@ README
 
 t/00load.t
 t/autolint.t
-t/back_ok.t
 t/bad.html
 t/badlinks.html
 t/click_ok.t
@@ -42,4 +41,5 @@ t/stuff_inputs.t
 t/submit_form_ok.t
 t/TestServer.pm
 t/text_contains.t
-META.yml                                 Module meta-data (added by MakeMaker)
+META.yml                                 Module YAML meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)

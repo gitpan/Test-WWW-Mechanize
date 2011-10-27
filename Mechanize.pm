@@ -9,11 +9,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.34
+Version 1.36
 
 =cut
 
-our $VERSION = '1.34';
+our $VERSION = '1.36';
 
 =head1 SYNOPSIS
 
@@ -84,7 +84,10 @@ passed in get passed to WWW::Mechanize's constructor.
 
 You can pass in C<< autolint => 1 >> to make Test::WWW::Mechanize
 automatically run HTML::Lint after any of the following methods are
-called.
+called. You can also pass in an HTML::Lint object like this:
+
+    my $lint = HTML::Lint->new( only_types => HTML::Lint::Error::STRUCTURE );
+    my $mech = Test::WWW::Mechanize->new( autolint => $lint );
 
 =over
 
@@ -486,7 +489,13 @@ sub _lint_content_ok {
     }
 
     # XXX Combine with the cut'n'paste version in get_ok()
+
     my $lint = HTML::Lint->new;
+
+    if ( ref $self->{autolint} && $self->{autolint}->isa('HTML::Lint') ) {
+        $lint = $self->{autolint};
+    }
+
     $lint->parse( $self->content );
 
     my @errors = $lint->errors;
@@ -1534,6 +1543,7 @@ L<http://search.cpan.org/dist/Test-WWW-Mechanize>
 =head1 ACKNOWLEDGEMENTS
 
 Thanks to
+Jonathan "Duke" Leto,
 Philip G. Potter,
 Niko Tyni,
 Greg Sheard,
