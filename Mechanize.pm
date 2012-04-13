@@ -9,11 +9,11 @@ Test::WWW::Mechanize - Testing-specific WWW::Mechanize subclass
 
 =head1 VERSION
 
-Version 1.38
+Version 1.40
 
 =cut
 
-our $VERSION = '1.38';
+our $VERSION = '1.40';
 
 =head1 SYNOPSIS
 
@@ -72,7 +72,7 @@ use Carp::Assert::More;
 
 use base 'WWW::Mechanize';
 
-my $Test = Test::Builder->new();
+my $TB = Test::Builder->new();
 
 
 =head1 CONSTRUCTOR
@@ -117,6 +117,8 @@ and can simply do
 The C<< $mech->get_ok() >> only counts as one test in the test count.  Both the
 main IO operation and the linting must pass for the entire test to pass.
 
+You can control autolint on the fly with the C<< autolint >> method.
+
 =cut
 
 sub new {
@@ -131,7 +133,7 @@ sub new {
 
     my $self = $class->SUPER::new( %args );
 
-    $self->{autolint} = $autolint;
+    $self->autolint( $autolint );
 
     return $self;
 }
@@ -170,17 +172,17 @@ sub _maybe_lint {
     local $Test::Builder::Level = $Test::Builder::Level + 1;
 
     if ( $ok ) {
-        if ( $self->is_html && $self->{autolint} ) {
+        if ( $self->is_html && $self->autolint ) {
             $ok = $self->_lint_content_ok( $desc );
         }
         else {
-            $Test->ok( $ok, $desc );
+            $TB->ok( $ok, $desc );
         }
     }
     else {
-        $Test->ok( $ok, $desc );
-        $Test->diag( $self->status );
-        $Test->diag( $self->response->message ) if $self->response;
+        $TB->ok( $ok, $desc );
+        $TB->diag( $self->status );
+        $TB->diag( $self->response->message ) if $self->response;
     }
 
     return $ok;
@@ -205,10 +207,10 @@ sub head_ok {
     $self->head( $url, %opts );
     my $ok = $self->success;
 
-    $Test->ok( $ok, $desc );
+    $TB->ok( $ok, $desc );
     if ( !$ok ) {
-        $Test->diag( $self->status );
-        $Test->diag( $self->response->message ) if $self->response;
+        $TB->diag( $self->status );
+        $TB->diag( $self->response->message ) if $self->response;
     }
 
     return $ok;
@@ -257,10 +259,10 @@ sub put_ok {
     $self->put( $url, %opts );
 
     my $ok = $self->success;
-    $Test->ok( $ok, $desc );
+    $TB->ok( $ok, $desc );
     if ( !$ok ) {
-        $Test->diag( $self->status );
-        $Test->diag( $self->response->message ) if $self->response;
+        $TB->diag( $self->status );
+        $TB->diag( $self->response->message ) if $self->response;
     }
 
     return $ok;
@@ -299,26 +301,13 @@ sub submit_form_ok {
     my $desc = shift;
 
     if ( ref $parms ne 'HASH' ) {
-       Carp::croak 'FATAL: parameters must be given as a hashref';
+        Carp::croak 'FATAL: parameters must be given as a hashref';
     }
 
     # return from submit_form() is an HTTP::Response or undef
     my $response = $self->submit_form( %{$parms} );
 
-    my $ok;
-    my $error;
-    if ( !$response ) {
-        $error = 'No matching form found';
-    }
-    else {
-        if ( $response->is_success ) {
-            $ok = 1;
-        }
-        else {
-            $error = $response->as_string;
-        }
-    }
-
+    my $ok = $response && $response->is_success;
     $ok = $self->_maybe_lint( $ok, $desc );
 
     return $ok;
@@ -363,20 +352,7 @@ sub follow_link_ok {
     # return from follow_link() is an HTTP::Response or undef
     my $response = $self->follow_link( %{$parms} );
 
-    my $ok;
-    my $error;
-    if ( !$response ) {
-        $error = 'No matching link found';
-    }
-    else {
-        if ( $response->is_success ) {
-            $ok = 1;
-        }
-        else {
-            $error = $response->as_string;
-        }
-    }
-
+    my $ok = $response && $response->is_success;
     $ok = $self->_maybe_lint( $ok, $desc );
 
     return $ok;
@@ -397,7 +373,7 @@ sub click_ok {
 
     my $response = $self->click( $button );
     if ( !$response ) {
-        return $Test->ok( 0, $desc );
+        return $TB->ok( 0, $desc );
     }
 
 
@@ -471,8 +447,8 @@ sub html_lint_ok {
         $ok = $self->_lint_content_ok( $desc );
     }
     else {
-        $ok = $Test->ok( 0, $desc );
-        $Test->diag( q{This page doesn't appear to be HTML, or didn't get the proper text/html content type returned.} );
+        $ok = $TB->ok( 0, $desc );
+        $TB->diag( q{This page doesn't appear to be HTML, or didn't get the proper text/html content type returned.} );
     }
 
     return $ok;
@@ -488,13 +464,7 @@ sub _lint_content_ok {
         die "Test::WWW::Mechanize can't do linting without HTML::Lint: $@";
     }
 
-    # XXX Combine with the cut'n'paste version in get_ok()
-
-    my $lint = HTML::Lint->new;
-
-    if ( ref $self->{autolint} && $self->{autolint}->isa('HTML::Lint') ) {
-        $lint = $self->{autolint};
-    }
+    my $lint = (ref $self->{autolint} && $self->{autolint}->isa('HTML::Lint')) ? $self->{autolint} : HTML::Lint->new();
 
     $lint->parse( $self->content );
 
@@ -502,14 +472,14 @@ sub _lint_content_ok {
     my $nerrors = @errors;
     my $ok;
     if ( $nerrors ) {
-        $ok = $Test->ok( 0, $desc );
-        $Test->diag( 'HTML::Lint errors for ' . $self->uri );
-        $Test->diag( $_->as_string ) for @errors;
+        $ok = $TB->ok( 0, $desc );
+        $TB->diag( 'HTML::Lint errors for ' . $self->uri );
+        $TB->diag( $_->as_string ) for @errors;
         my $s = $nerrors == 1 ? '' : 's';
-        $Test->diag( "$nerrors error$s on the page" );
+        $TB->diag( "$nerrors error$s on the page" );
     }
     else {
-        $ok = $Test->ok( 1, $desc );
+        $ok = $TB->ok( 1, $desc );
     }
 
     return $ok;
@@ -654,7 +624,7 @@ sub content_contains {
     local $Test::Builder::Level = $Test::Builder::Level + 1;
 
     if ( ref($str) ) {
-        return $Test->ok( 0, 'Test::WWW::Mechanize->content_contains called incorrectly.  It requires a scalar, not a reference.' );
+        return $TB->ok( 0, 'Test::WWW::Mechanize->content_contains called incorrectly.  It requires a scalar, not a reference.' );
     }
     $desc = qq{Content contains "$str"} if !defined($desc);
 
@@ -674,7 +644,7 @@ sub content_lacks {
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
     if ( ref($str) ) {
-        return $Test->ok( 0, 'Test::WWW::Mechanize->content_lacks called incorrectly.  It requires a scalar, not a reference.' );
+        return $TB->ok( 0, 'Test::WWW::Mechanize->content_lacks called incorrectly.  It requires a scalar, not a reference.' );
     }
     $desc = qq{Content lacks "$str"} if !defined($desc);
 
@@ -736,7 +706,7 @@ sub text_contains {
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
     if ( ref($str) ) {
-        return $Test->ok( 0, 'Test::WWW::Mechanize->text_contains called incorrectly.  It requires a scalar, not a reference.' );
+        return $TB->ok( 0, 'Test::WWW::Mechanize->text_contains called incorrectly.  It requires a scalar, not a reference.' );
     }
 
     return contains_string( $self->text, $str, $desc );
@@ -755,7 +725,7 @@ sub text_lacks {
 
     local $Test::Builder::Level = $Test::Builder::Level + 1;
     if ( ref($str) ) {
-        return $Test->ok( 0, 'Test::WWW::Mechanize->text_lacks called incorrectly.  It requires a scalar, not a reference.' );
+        return $TB->ok( 0, 'Test::WWW::Mechanize->text_lacks called incorrectly.  It requires a scalar, not a reference.' );
     }
     $desc = qq{Text lacks "$str"} if !defined($desc);
 
@@ -806,7 +776,7 @@ sub has_tag {
 
     my $found = $self->_tag_walk( $tag, sub { $text eq $_[0] } );
 
-    return $Test->ok( $found, $desc );
+    return $TB->ok( $found, $desc );
 }
 
 
@@ -825,7 +795,7 @@ sub has_tag_like {
 
     my $found = $self->_tag_walk( $tag, sub { $_[0] =~ $regex } );
 
-    return $Test->ok( $found, $desc );
+    return $TB->ok( $found, $desc );
 }
 
 
@@ -837,7 +807,7 @@ sub _tag_walk {
     my $p = HTML::TokeParser->new( \($self->content) );
 
     while ( my $token = $p->get_tag( $tag ) ) {
-        my $tagtext = $p->get_trimmed_text( "/$tag" );
+        my $tagtext = $p->get_trimmed_text();
         return 1 if $match->( $tagtext );
     }
     return;
@@ -876,8 +846,8 @@ sub page_links_ok {
     my @failures = $self->_check_links_status( \@urls );
     my $ok = (@failures==0);
 
-    $Test->ok( $ok, $desc );
-    $Test->diag( $_ ) for @failures;
+    $TB->ok( $ok, $desc );
+    $TB->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -898,11 +868,11 @@ sub page_links_content_like {
 
     $desc = qq{All links are like "$regex"} unless defined $desc;
 
-    my $usable_regex=$Test->maybe_regex( $regex );
+    my $usable_regex=$TB->maybe_regex( $regex );
 
     if ( !defined( $usable_regex ) ) {
-        my $ok = $Test->ok( 0, 'page_links_content_like' );
-        $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
+        my $ok = $TB->ok( 0, 'page_links_content_like' );
+        $TB->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
     }
 
@@ -912,8 +882,8 @@ sub page_links_content_like {
     my @failures = $self->_check_links_content( \@urls, $regex );
     my $ok = (@failures==0);
 
-    $Test->ok( $ok, $desc );
-    $Test->diag( $_ ) for @failures;
+    $TB->ok( $ok, $desc );
+    $TB->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -934,11 +904,11 @@ sub page_links_content_unlike {
     my $desc = shift;
     $desc = qq{All links are unlike "$regex"} unless defined($desc);
 
-    my $usable_regex=$Test->maybe_regex( $regex );
+    my $usable_regex=$TB->maybe_regex( $regex );
 
     if ( !defined( $usable_regex ) ) {
-        my $ok = $Test->ok( 0, 'page_links_content_unlike' );
-        $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
+        my $ok = $TB->ok( 0, 'page_links_content_unlike' );
+        $TB->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
     }
 
@@ -948,8 +918,8 @@ sub page_links_content_unlike {
     my @failures = $self->_check_links_content( \@urls, $regex, 'unlike' );
     my $ok = (@failures==0);
 
-    $Test->ok( $ok, $desc );
-    $Test->diag( $_ ) for @failures;
+    $TB->ok( $ok, $desc );
+    $TB->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -981,8 +951,8 @@ sub links_ok {
     my @failures = $self->_check_links_status( \@urls );
     my $ok = (@failures == 0);
 
-    $Test->ok( $ok, $desc );
-    $Test->diag( $_ ) for @failures;
+    $TB->ok( $ok, $desc );
+    $TB->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -1011,8 +981,8 @@ sub link_status_is {
     my @failures = $self->_check_links_status( \@urls, $status );
     my $ok = (@failures == 0);
 
-    $Test->ok( $ok, $desc );
-    $Test->diag( $_ ) for @failures;
+    $TB->ok( $ok, $desc );
+    $TB->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -1041,8 +1011,8 @@ sub link_status_isnt {
     my @failures = $self->_check_links_status( \@urls, $status, 'isnt' );
     my $ok = (@failures == 0);
 
-    $Test->ok( $ok, $desc );
-    $Test->diag( $_ ) for @failures;
+    $TB->ok( $ok, $desc );
+    $TB->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -1067,11 +1037,11 @@ sub link_content_like {
     my $regex = shift;
     my $desc = shift;
 
-    my $usable_regex=$Test->maybe_regex( $regex );
+    my $usable_regex=$TB->maybe_regex( $regex );
 
     if ( !defined( $usable_regex ) ) {
-        my $ok = $Test->ok( 0, 'link_content_like' );
-        $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
+        my $ok = $TB->ok( 0, 'link_content_like' );
+        $TB->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
     }
 
@@ -1080,8 +1050,8 @@ sub link_content_like {
     my @failures = $self->_check_links_content( \@urls, $regex );
     my $ok = (@failures == 0);
 
-    $Test->ok( $ok, $desc );
-    $Test->diag( $_ ) for @failures;
+    $TB->ok( $ok, $desc );
+    $TB->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -1105,11 +1075,11 @@ sub link_content_unlike {
     my $regex = shift;
     my $desc = shift;
 
-    my $usable_regex=$Test->maybe_regex( $regex );
+    my $usable_regex=$TB->maybe_regex( $regex );
 
     if ( !defined( $usable_regex ) ) {
-        my $ok = $Test->ok( 0, 'link_content_unlike' );
-        $Test->diag(qq{     "$regex" doesn't look much like a regex to me.});
+        my $ok = $TB->ok( 0, 'link_content_unlike' );
+        $TB->diag(qq{     "$regex" doesn't look much like a regex to me.});
         return $ok;
     }
 
@@ -1118,8 +1088,8 @@ sub link_content_unlike {
     my @failures = $self->_check_links_content( \@urls, $regex, 'unlike' );
     my $ok = (@failures == 0);
 
-    $Test->ok( $ok, $desc );
-    $Test->diag( $_ ) for @failures;
+    $TB->ok( $ok, $desc );
+    $TB->diag( $_ ) for @failures;
 
     return $ok;
 }
@@ -1150,7 +1120,7 @@ sub _check_links_status {
                 push( @failures, $url ) unless $mech->status() == $status;
             }
             else {
-                push( @failures, $url ) unless $mech->status() != $status;
+                push( @failures, $url ) if $mech->status() == $status;
             }
             $mech->back();
         }
@@ -1178,10 +1148,10 @@ sub _check_links_content {
         if ( $mech->follow_link( url => $url ) ) {
             my $content=$mech->content();
             if ( $test eq 'like' ) {
-                push( @failures, $url ) unless $content=~/$regex/;
+                push( @failures, $url ) unless $content =~ /$regex/;
             }
             else {
-                push( @failures, $url ) unless $content!~/$regex/;
+                push( @failures, $url ) if $content =~ /$regex/;
             }
             $mech->back();
         }
@@ -1396,11 +1366,46 @@ sub lacks_uncapped_inputs {
         }
     }
 
-    my $ok = $Test->cmp_ok( scalar @uncapped, '==', 0, $comment );
-    $Test->diag( $_ ) for @uncapped;
+    my $ok = $TB->cmp_ok( scalar @uncapped, '==', 0, $comment );
+    $TB->diag( $_ ) for @uncapped;
 
     return $ok;
 }
+
+
+=head1 METHODS: MISCELLANEOUS
+
+=head2 $mech->autolint( [$status] )
+
+Without an argument, this method returns a true or false value indicating
+whether autolint is active.
+
+When passed an argument, autolint is turned on or off depending on whether
+the argument is true or false, and the previous autolint status is returned.
+As with the autolint option of C<< new >>, C<< $status >> can be an
+L<< HTML::Lint >> object.
+
+If autolint is currently using an L<< HTML::Lint >> object you provided,
+the return is that object, so you can change and exactly restore
+autolint status:
+
+    my $old_status = $mech->autolint( 0 );
+    ... operations that should not be linted ...
+    $mech->autolint->( $old_status );
+
+=cut
+
+sub autolint {
+    my $self = shift;
+
+    my $ret = $self->{autolint};
+    if ( @_ ) {
+        $self->{autolint} = shift;
+    }
+
+    return $ret;
+}
+
 
 =head2 $mech->grep_inputs( \%properties )
 
@@ -1489,13 +1494,149 @@ sub _grep_hashes {
 }
 
 
+=head2 $mech->scrape_text_by_attr( $attr, $attr [, $html ] )
+
+=head2 $mech->scrape_text_by_attr( $attr, $attr_regex [, $html ] )
+
+Returns an array of strings, each string the text surrounded by an
+element with attribute I<$attr> of value I<$value>.  You can also pass in
+a regular expression.  If nothing is found the return is an empty list.
+In scalar context the return is the first string found.
+
+If passed, I<$html> is scraped instead of the current page's content.
+
+=cut
+
+sub scrape_text_by_attr {
+    my $self = shift;
+    my $attr = shift;
+    my $value = shift;
+
+    my $html = $self->_get_optional_html( @_ );
+
+    my @results;
+
+    if ( defined $html ) {
+        my $parser = HTML::TokeParser->new(\$html);
+
+        while ( my $token = $parser->get_tag() ) {
+            if ( ref $token->[1] eq 'HASH' ) {
+                if ( exists $token->[1]->{$attr} ) {
+                    my $matched =
+                        (ref $value eq 'Regexp')
+                            ? $token->[1]->{$attr} =~ $value
+                            : $token->[1]->{$attr} eq $value;
+                    if ( $matched ) {
+                        my $tag = $token->[ 0 ];
+                        push @results, $parser->get_trimmed_text( "/$tag" );
+                        if ( !wantarray ) {
+                            last;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return $results[0] if !wantarray;
+    return @results;
+}
+
+
+=head2 scrape_text_by_id( $id [, $html ] )
+
+Finds all elements with the given id attribute and pulls out the text that that element encloses.
+
+In list context, returns a list of all strings found. In scalar context, returns the first one found.
+
+If C<$html> is not provided then the current content is used.
+
+=cut
+
+sub scrape_text_by_id {
+    my $self = shift;
+    my $id   = shift;
+
+    my $html = $self->_get_optional_html( @_ );
+
+    my @results;
+
+    if ( defined $html ) {
+        my $found = index( $html, "id=\"$id\"" );
+        if ( $found >= 0 ) {
+            my $parser = HTML::TokeParser->new( \$html );
+
+            while ( my $token = $parser->get_tag() ) {
+                if ( ref $token->[1] eq 'HASH' ) {
+                    my $actual_id = $token->[1]->{id};
+                    $actual_id = '' unless defined $actual_id;
+                    if ( $actual_id eq $id ) {
+                        my $tag = $token->[ 0 ];
+                        push @results, $parser->get_trimmed_text( "/$tag" );
+                        if ( !wantarray ) {
+                            last;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return $results[0] if !wantarray;
+    return @results;
+}
+
+
+sub _get_optional_html {
+    my $self = shift;
+
+    my $html;
+    if ( @_ ) {
+        $html = shift;
+        assert_nonblank( $html, '$html passed in is a populated scalar' );
+    }
+    else {
+        if ( $self->is_html ) {
+            $html = $self->content();
+        }
+    }
+
+    return $html;
+}
+
+
+=head2 $mech->scraped_id_is( $id, $expected [, $msg] )
+
+Scrapes the current page for given ID and tests that it matches the expected value.
+
+=cut
+
+sub scraped_id_is {
+    my $self     = shift;
+    my $id       = shift;
+    my $expected = shift;
+    my $msg      = shift;
+
+    if ( not defined $msg ) {
+        my $what = defined( $expected ) ? $expected : '(undef)';
+
+        $msg = qq{scraped id "$id" is "$what"};
+    }
+
+    local $Test::Builder::Level = $Test::Builder::Level + 1;
+
+    my $got = $self->scrape_text_by_id($id);
+    is( $got, $expected, $msg );
+
+    return;
+}
 
 
 =head1 TODO
 
 Add HTML::Tidy capabilities.
 
-Add a broken image check.
+Other ideas for features are at https://github.com/petdance/test-www-mechanize
 
 =head1 AUTHOR
 
@@ -1504,9 +1645,7 @@ Andy Lester, C<< <andy at petdance.com> >>
 =head1 BUGS
 
 Please report any bugs or feature requests to
-<http://code.google.com/p/www-mechanize/issues/list>.  I will be
-notified, and then you'll automatically be notified of progress on
-your bug as I make changes.
+<https://github.com/petdance/test-www-mechanize>.
 
 =head1 SUPPORT
 
@@ -1520,11 +1659,7 @@ You can also look for information at:
 
 =item * Bug tracker
 
-L<http://code.google.com/p/www-mechanize/issues/list>
-
-Please B<do not use> the old queues for WWW::Mechanize and
-Test::WWW::Mechanize at
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Test-WWW-Mechanize>
+L<https://github.com/petdance/test-www-mechanize>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
@@ -1558,7 +1693,7 @@ and Pete Krawczyk for patches.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2004-2011 Andy Lester.
+Copyright 2004-2012 Andy Lester.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the Artistic License version 2.0.

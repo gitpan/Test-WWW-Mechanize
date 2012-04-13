@@ -1,4 +1,4 @@
-#!perl -Tw
+#!perl -T
 
 use strict;
 use warnings;
@@ -41,7 +41,7 @@ SKIP: {
 
     my $badurl = "http://$NONEXISTENT/";
     $mech->head($badurl);
-    ok(!$mech->success, q{sanity check: we can't load $badurl} );
+    ok(!$mech->success, qq{sanity check: we can't load $badurl} );
 
     test_out( 'not ok 1 - Try to HEAD bad URL' );
     test_fail( +3 );
@@ -53,3 +53,5 @@ SKIP: {
     is( ref($ok), '', 'head_ok() should only return a scalar' );
     ok( !$ok, 'And the result should be false' );
 }
+
+done_testing();

@@ -6,15 +6,60 @@ use Test::Builder::Tester;
 use Test::More;
 use URI::file;
 
-BEGIN {
-    eval 'use HTML::Lint';
-    plan skip_all => 'HTML::Lint is not installed, cannot test autolint' if $@;
-    plan tests => 8;
-}
+use Test::WWW::Mechanize;
 
 BEGIN {
-    use_ok( 'Test::WWW::Mechanize' );
+    # Load HTML::Lint here for the imports
+    if ( not eval 'use HTML::Lint;' ) {
+        plan skip_all => 'HTML::Lint is not installed, cannot test autolint' if $@;
+    }
+    plan tests => 23;
 }
+
+
+ACCESSOR_MUTATOR: {
+    my $lint = HTML::Lint->new( only_types => HTML::Lint::Error::STRUCTURE );
+
+    ACCESSOR: {
+        my $mech = Test::WWW::Mechanize->new();
+        ok( !$mech->autolint(), 'no autolint to new yields autolint off' );
+
+        $mech = Test::WWW::Mechanize->new( autolint => undef );
+        ok( !$mech->autolint(), 'undef to new yields autolint off' );
+
+        $mech = Test::WWW::Mechanize->new( autolint => 0 );
+        ok( !$mech->autolint(), '0 to new yields autolint off' );
+
+        $mech = Test::WWW::Mechanize->new( autolint => 1 );
+        ok( $mech->autolint(), '1 to new yields autolint on' );
+
+        $mech = Test::WWW::Mechanize->new( autolint => [] );
+        ok( $mech->autolint(), 'non-false, non-object to new yields autolint on' );
+
+        $mech = Test::WWW::Mechanize->new( autolint => $lint );
+        ok( $mech->autolint(), 'HTML::Lint object to new yields autolint on' );
+    }
+
+    MUTATOR: {
+        my $mech = Test::WWW::Mechanize->new();
+
+        ok( !$mech->autolint(0), '0 returns autolint off' );
+        ok( !$mech->autolint(), '0 autolint really off' );
+
+        ok( !$mech->autolint(''), '"" returns autolint off' );
+        ok( !$mech->autolint(), '"" autolint really off' );
+
+        ok( !$mech->autolint(1), '1 returns autolint off (prior state)' );
+        ok( $mech->autolint(), '1 autolint really on' );
+
+        ok( $mech->autolint($lint), 'HTML::Lint object returns autolint on (prior state)' );
+        ok( $mech->autolint(), 'HTML::Lint object autolint really on' );
+        my $ret = $mech->autolint( 0 );
+        isa_ok( $ret, 'HTML::Lint' );
+        ok( !$mech->autolint(), 'autolint off after nuking HTML::Lint object' );
+    }
+}
+
 
 CUSTOM_LINTER: {
     my $lint = HTML::Lint->new( only_types => HTML::Lint::Error::STRUCTURE );
@@ -63,3 +108,5 @@ GOOD_GET_BAD_HTML: {
     $mech->follow_link_ok( { text => 'Back to bad' }, 'Following link back to bad.html' );
     test_test( 'follow_link_ok complains about bad HTML' );
 }
+
+done_testing();
