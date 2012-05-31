@@ -2,7 +2,7 @@ Changes
 MANIFEST
 Makefile.PL
 Mechanize.pm
-README
+README.md
 
 t/00-load.t
 t/autolint.t
@@ -11,6 +11,7 @@ t/badlinks.html
 t/click_ok.t
 t/content_contains.t
 t/content_lacks.t
+t/fluffy.html
 t/followable_links.t
 t/follow_link_ok.t
 t/get_ok-parms.t
@@ -43,4 +44,6 @@ t/submit_form_ok.t
 t/table.html
 t/TestServer.pm
 t/text_contains.t
-META.yml                                 Module meta-data (added by MakeMaker)
+t/title_is.t
+META.yml                                 Module YAML meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)
